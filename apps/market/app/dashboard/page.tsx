@@ -7,13 +7,14 @@ export default async function DashboardPage() {
   // Fetch items submitted by this user (status any, including pending/rejected)
   const { data: myItems } = await supabase
     .from('items')
-    .select('id, slug, name, category, status, version, created_at, publishers(name)')
+    .select('id, slug, name, category, status, version, created_at, publishers!inner(name)')
     .eq('publishers.slug', user?.user_metadata['user_name'] ?? '')
     .order('created_at', { ascending: false })
 
   const items = (myItems ?? []) as Array<{
     id: string; slug: string; name: string;
-    category: string; status: string; version: string; created_at: string
+    category: string; status: string; version: string; created_at: string;
+    publishers: { name: string } | null
   }>
 
   const statusLabel: Record<string, string> = {

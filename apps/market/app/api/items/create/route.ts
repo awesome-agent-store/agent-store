@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
   if (insertError) {
     // slug uniqueness violation
     if ((insertError as { code?: string }).code === '23505') {
-      return NextResponse.json({ error: 'A item with this slug already exists' }, { status: 409 })
+      return NextResponse.json({ error: 'An item with this slug already exists' }, { status: 409 })
     }
     return NextResponse.json({ error: 'Failed to create item' }, { status: 500 })
   }

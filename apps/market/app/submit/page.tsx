@@ -62,6 +62,7 @@ export default function SubmitPage() {
       return
     }
 
+    setPending(false)
     router.push('/dashboard')
   }
 
@@ -75,26 +76,26 @@ export default function SubmitPage() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-xl">
         <div>
-          <label className={labelClass}>Slug <span className="text-ray-danger">*</span></label>
-          <input required className={inputClass} placeholder="openai-provider"
+          <label htmlFor="field-slug" className={labelClass}>Slug <span className="text-ray-danger">*</span></label>
+          <input id="field-slug" required className={inputClass} placeholder="openai-provider"
             value={form.slug} onChange={(e) => update('slug', e.target.value)} />
         </div>
 
         <div>
-          <label className={labelClass}>Name <span className="text-ray-danger">*</span></label>
-          <input required className={inputClass} placeholder="OpenAI Provider"
+          <label htmlFor="field-name" className={labelClass}>Name <span className="text-ray-danger">*</span></label>
+          <input id="field-name" required className={inputClass} placeholder="OpenAI Provider"
             value={form.name} onChange={(e) => update('name', e.target.value)} />
         </div>
 
         <div>
-          <label className={labelClass}>Description <span className="text-ray-danger">*</span></label>
-          <textarea required rows={2} className={inputClass} placeholder="Short description (1-2 sentences)"
+          <label htmlFor="field-description" className={labelClass}>Description <span className="text-ray-danger">*</span></label>
+          <textarea id="field-description" required rows={2} className={inputClass} placeholder="Short description (1-2 sentences)"
             value={form.description} onChange={(e) => update('description', e.target.value)} />
         </div>
 
         <div>
-          <label className={labelClass}>Category <span className="text-ray-danger">*</span></label>
-          <select required className={inputClass}
+          <label htmlFor="field-category" className={labelClass}>Category <span className="text-ray-danger">*</span></label>
+          <select id="field-category" required className={inputClass}
             value={form.category} onChange={(e) => update('category', e.target.value as FormState['category'])}>
             <option value="provider">Provider</option>
             <option value="skill">Skill</option>
@@ -103,26 +104,26 @@ export default function SubmitPage() {
         </div>
 
         <div>
-          <label className={labelClass}>Version <span className="text-ray-danger">*</span></label>
-          <input required className={inputClass} placeholder="1.0.0"
+          <label htmlFor="field-version" className={labelClass}>Version <span className="text-ray-danger">*</span></label>
+          <input id="field-version" required className={inputClass} placeholder="1.0.0"
             value={form.version} onChange={(e) => update('version', e.target.value)} />
         </div>
 
         <div>
-          <label className={labelClass}>README URL <span className="text-ray-danger">*</span></label>
-          <input required type="url" className={inputClass} placeholder="https://..."
+          <label htmlFor="field-readmeUrl" className={labelClass}>README URL <span className="text-ray-danger">*</span></label>
+          <input id="field-readmeUrl" required type="url" className={inputClass} placeholder="https://..."
             value={form.readmeUrl} onChange={(e) => update('readmeUrl', e.target.value)} />
         </div>
 
         <div>
-          <label className={labelClass}>Icon URL <span className="text-ray-danger">*</span></label>
-          <input required type="url" className={inputClass} placeholder="https://..."
+          <label htmlFor="field-icon" className={labelClass}>Icon URL <span className="text-ray-danger">*</span></label>
+          <input id="field-icon" required type="url" className={inputClass} placeholder="https://..."
             value={form.icon} onChange={(e) => update('icon', e.target.value)} />
         </div>
 
         <div>
-          <label className={labelClass}>Tags (comma-separated)</label>
-          <input className={inputClass} placeholder="ai, openai, gpt"
+          <label htmlFor="field-tags" className={labelClass}>Tags (comma-separated)</label>
+          <input id="field-tags" className={inputClass} placeholder="ai, openai, gpt"
             value={form.tags} onChange={(e) => update('tags', e.target.value)} />
         </div>
 
