@@ -65,4 +65,39 @@ export class AASClient {
       return { data: null, error: err instanceof Error ? err.message : String(err) }
     }
   }
+
+  async getPublisher(slug: string): Promise<Result<PublisherWithItems>> {
+    try {
+      const res = await fetch(`${this.baseUrl}/api/publishers/${encodeURIComponent(slug)}`)
+      const json = await res.json() as { publisher?: Publisher; items?: Item[]; error?: string }
+
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
+      if (!json.publisher) return { data: null, error: 'No publisher in response' }
+      return { data: { publisher: json.publisher, items: json.items ?? [] }, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  async createItem(
+    body: CreateItemBody,
+    options: { cookie?: string } = {}
+  ): Promise<Result<{ success: true }>> {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (options.cookie) headers['Cookie'] = options.cookie
+
+      const res = await fetch(`${this.baseUrl}/api/items/create`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      })
+      const json = await res.json() as { success?: true; error?: string }
+
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
+      return { data: { success: true }, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
 }
