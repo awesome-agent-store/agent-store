@@ -76,6 +76,19 @@ importers:
         specifier: ^5.4.5
         version: 5.4.5
 
+  packages/sdk:
+    dependencies:
+      '@aas/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@types/bun':
+        specifier: latest
+        version: 1.3.14
+      typescript:
+        specifier: ^5.4.0
+        version: 5.4.5
+
   packages/types:
     devDependencies:
       '@types/bun':
