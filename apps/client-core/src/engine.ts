@@ -158,7 +158,7 @@ export class AASEngineImpl implements AASEngine {
   }
 
   async update(slug?: string): Promise<UpdateResult[]> {
-    const registry = await readRegistry(this.paths.aasHome)
+    let registry = await readRegistry(this.paths.aasHome)
     const entries = slug
       ? registry.installed.filter(e => e.slug === slug)
       : registry.installed
@@ -170,13 +170,13 @@ export class AASEngineImpl implements AASEngine {
         const dir = itemDir(this.paths.aasHome, entry.category, entry.slug)
         await runHook(latestItem.installHook.steps, dir)
         if (latestItem.category === 'provider') await providerPostInstall(dir)
+        else if (latestItem.category === 'skill') await skillPostInstall(dir)
         else if (latestItem.category === 'mcp') await mcpPostInstall(dir)
         await writeManifest(dir, latestItem)
         const now = new Date().toISOString()
-        await writeRegistry(
-          this.paths.aasHome,
-          upsertEntry(registry, { ...entry, version: latestItem.version, updatedAt: now })
-        )
+        const updatedRegistry = upsertEntry(registry, { ...entry, version: latestItem.version, updatedAt: now })
+        await writeRegistry(this.paths.aasHome, updatedRegistry)
+        registry = updatedRegistry
         for (const target of entry.compatibleWith) {
           if (entry.enabledFor[target]) {
             await this._syncToTarget(entry.slug, entry.category, target, 'add')

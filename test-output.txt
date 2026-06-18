@@ -1,0 +1,177 @@
+bun test v1.3.12 (700fc117)
+
+apps/market/app/__tests__/page.test.tsx:
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/app/__tests__/page.test.tsx:63:5)
+(fail) HomePage > renders the hero heading [0.95ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/app/__tests__/page.test.tsx:68:5)
+(fail) HomePage > renders Featured and New section headings [0.11ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/app/__tests__/page.test.tsx:74:5)
+(fail) HomePage > renders items from query results [0.10ms]
+
+apps/market/components/__tests__/ItemCard.test.tsx:
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/ItemCard.test.tsx:55:3)
+(fail) ItemCard renders item name [0.08ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/ItemCard.test.tsx:60:3)
+(fail) ItemCard renders description [0.06ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/ItemCard.test.tsx:65:3)
+(fail) ItemCard renders formatted downloads: 1.2M [0.04ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/ItemCard.test.tsx:70:3)
+(fail) ItemCard renders 999 downloads without abbreviation [0.04ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/ItemCard.test.tsx:75:3)
+(fail) ItemCard renders 1500 downloads as 1.5K [0.03ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/ItemCard.test.tsx:80:3)
+(fail) ItemCard links to correct detail page [0.04ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/ItemCard.test.tsx:86:3)
+(fail) ItemCard renders compat tools [0.03ms]
+
+apps/market/components/__tests__/Badge.test.tsx:
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/Badge.test.tsx:8:3)
+(fail) Badge renders its children [0.05ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/Badge.test.tsx:13:3)
+(fail) Badge applies official color class [0.04ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/Badge.test.tsx:18:3)
+(fail) Badge applies verified color class [0.04ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/Badge.test.tsx:23:3)
+(fail) Badge applies secondary color for community [0.03ms]
+251 |     throw error;
+252 |   }
+253 |   if (!baseElement) {
+254 |     // default to document.body instead of documentElement to avoid output of potentially-large
+255 |     // head elements (such as JSS style blocks) in debug output
+256 |     baseElement = document.body;
+                        ^
+ReferenceError: document is not defined
+      at render (/Users/liushangliang/github/ai-agent-store/node_modules/.pnpm/@testing-library+react@16.3.2_@testing-library+dom@10.4.1_@types+react-dom@18.3.7_@type_b0bbe147884ef4cbbf95e64a97c782e8/node_modules/@testing-library/react/dist/pure.js:256:19)
+      at <anonymous> (/Users/liushangliang/github/ai-agent-store/apps/market/components/__tests__/Badge.test.tsx:28:3)
+(fail) Badge applies muted style for category variants [0.02ms]
+
+ 96 pass
+ 15 fail
+ 162 expect() calls
+Ran 111 tests across 16 files. [252.00ms]

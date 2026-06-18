@@ -1,6 +1,5 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, rm } from 'fs/promises'
-import { join } from 'path'
 import { readRegistry, writeRegistry, findEntry, upsertEntry, removeEntry } from '../index'
 import type { InstalledItem } from '@aas/types'
 

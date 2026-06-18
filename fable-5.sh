@@ -1,0 +1,1 @@
+claude --dangerously-skip-permissions --system-prompt-file claude-fable-5.md
