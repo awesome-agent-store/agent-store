@@ -64,3 +64,7 @@ CREATE POLICY "Published items are readable by all"
 
 CREATE POLICY "Publishers are readable by all"
   ON publishers FOR SELECT USING (true);
+
+-- Grant SELECT to anon and authenticated roles (required for PostgREST)
+GRANT SELECT ON publishers TO anon, authenticated;
+GRANT SELECT ON items      TO anon, authenticated;
