@@ -402,6 +402,103 @@ aas list [--for <claude|codex>]          # 查看已安装/已启用条目
 aas info <slug>                          # 查看条目详情
 ```
 
+### 7.2 CLI 输出规范
+
+CLI UX 对标 **VS Code Extension 管理模型**（不是 Raycast launcher）：结构化列表、per-tool 启用状态是一等公民、操作步骤 inline 反馈。
+
+#### 状态符号
+
+| 符号 | 含义 |
+|------|------|
+| `✓` | 已启用 |
+| `✗` | 已禁用 |
+| ` ` （空）| 不兼容（`compatibleWith` 不含该工具） |
+| `↑` | 有可用更新 |
+
+#### `aas list`
+
+```
+$ aas list
+NAME                VERSION   CLAUDE   CODEX   TYPE       STATUS
+openai-provider     1.2.0     ✓        ✓       provider
+my-skill            0.3.0     ✓        ✗       skill      ↑ 0.4.0 available
+filesystem-mcp      0.1.0     ✓                mcp
+```
+
+- 列宽固定对齐，方便扫读
+- `--for claude` 时只显示 `compatibleWith` 含 claude 的条目，且只显示 claude 列
+- 有更新时 STATUS 列显示 `↑ x.y.z available`
+
+#### `aas search`
+
+```
+$ aas search gpt
+openai-provider   official · provider · claude codex   1.2M installs
+  OpenAI API provider with GPT-4o, o1, o3 model support
+
+gpt-skill-pack    verified · skill · claude            12K installs
+  Prompting techniques and chain-of-thought skills for GPT models
+```
+
+- 每条结果两行：第一行 slug + publisher tier + category + compatibility + downloads；第二行缩进 description
+- tier 标识：`official` / `verified` / `community`（不加颜色标注，靠词本身区分）
+
+#### `aas install`
+
+```
+$ aas install openai-provider
+  Fetching openai-provider@1.2.0...    done
+  Running install hooks...             done
+  Writing to ~/.agents/providers/openai-provider/
+  Syncing to claude...                 done
+  Syncing to codex...                  done
+
+  Installed openai-provider 1.2.0
+  ⚠ API key required — run: aas config openai-provider
+```
+
+- 每一步独立一行，右侧对齐 `done` / `failed`
+- 最终一行汇总：`Installed <slug> <version>`
+- Provider/MCP 安装后追加 `⚠ ... required` 提示
+- 失败时该步骤显示 `failed`，后续步骤跳过，末尾输出错误原因
+
+#### `aas config`（交互式填写 configSchema）
+
+```
+$ aas config openai-provider
+  openai-provider — configuration
+
+  API Key (required)
+  > sk-...
+
+  Base URL (optional, default: https://api.openai.com/v1)
+  > [Enter to skip]
+
+  Saved. Run `aas sync` to apply changes.
+```
+
+- 每个字段一段：字段名（必填/可选）+ 默认值提示 + 输入行
+- 此 I/O 由 CLI 层实现，engine 只提供 `getConfigSchema()` / `setConfig()`
+
+#### `aas info`
+
+```
+$ aas info openai-provider
+
+  openai-provider  1.2.0   official
+  OpenAI API provider — supports GPT-4o, o1, o3, embeddings
+
+  Publisher    OpenAI (openai)
+  Compatible   claude · codex
+  Installed    2026-06-18  (updated 2026-06-18)
+  Status       claude: enabled  |  codex: enabled
+
+  Models
+    gpt-4o · gpt-4o-mini · o1 · o3 · text-embedding-3-small
+
+  Run `aas config openai-provider` to update configuration.
+```
+
 ---
 
 ## 8. Tauri GUI（未来）
