@@ -110,6 +110,19 @@ describe('AASClient.getItems', () => {
 
     globalThis.fetch = originalFetch
   })
+
+  test('returns error when response has no items field', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({}), { status: 200 })
+
+    const client = new AASClient()
+    const result = await client.getItems()
+    expect(result.data).toBeNull()
+    expect(result.error).toBe('No items in response')
+
+    globalThis.fetch = originalFetch
+  })
 })
 
 describe('AASClient.getItemBySlug', () => {

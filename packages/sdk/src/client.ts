@@ -47,7 +47,8 @@ export class AASClient {
       const json = await res.json() as { items?: Item[]; error?: string }
 
       if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
-      return { data: json.items ?? [], error: null }
+      if (json.items == null) return { data: null, error: 'No items in response' }
+      return { data: json.items, error: null }
     } catch (err) {
       return { data: null, error: err instanceof Error ? err.message : String(err) }
     }
