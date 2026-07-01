@@ -28,7 +28,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className={inter.variable} data-theme="dark">
-      <body className="min-h-screen bg-ray-surface-0 text-ray-fg antialiased">
+      <body className="min-h-screen bg-store-content text-store-text antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ClientStateProvider>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
