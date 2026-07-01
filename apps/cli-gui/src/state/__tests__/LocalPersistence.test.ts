@@ -1,18 +1,16 @@
-import { test, expect, mock, afterEach } from 'bun:test'
+import { test, expect, mock, spyOn, afterEach } from 'bun:test'
+import * as fsModule from '@tauri-apps/plugin-fs'
 
 afterEach(() => { mock.restore() })
 
 function mockFs(existingContent: string | null) {
   const written: { path: string; content: string }[] = []
-  mock.module('@tauri-apps/plugin-fs', () => ({
-    exists: async () => existingContent !== null,
-    readTextFile: async () => existingContent as string,
-    writeTextFile: async (path: string, content: string) => {
-      written.push({ path, content })
-    },
-    mkdir: async () => undefined,
-    BaseDirectory: { AppData: 'AppData' },
-  }))
+  spyOn(fsModule, 'exists').mockImplementation(async () => existingContent !== null)
+  spyOn(fsModule, 'readTextFile').mockImplementation(async () => existingContent as string)
+  spyOn(fsModule, 'writeTextFile').mockImplementation(async (path: string | URL, content: string) => {
+    written.push({ path: String(path), content })
+  })
+  spyOn(fsModule, 'mkdir').mockImplementation(async () => undefined)
   return written
 }
 

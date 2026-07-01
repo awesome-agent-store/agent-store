@@ -1,15 +1,12 @@
-import { test, expect, mock, afterEach } from 'bun:test'
+import { test, expect, mock, spyOn, afterEach } from 'bun:test'
+import { Command } from '@tauri-apps/plugin-shell'
 
 afterEach(() => { mock.restore() })
 
 function mockSidecar(stdout: string, code = 0) {
-  mock.module('@tauri-apps/plugin-shell', () => ({
-    Command: {
-      sidecar: () => ({
-        execute: async () => ({ code, stdout, stderr: '' }),
-      }),
-    },
-  }))
+  spyOn(Command, 'sidecar').mockImplementation((() => ({
+    execute: async () => ({ code, stdout, stderr: '' }),
+  })) as unknown as typeof Command.sidecar)
 }
 
 test('callRpc resolves data on ok:true', async () => {
@@ -33,14 +30,10 @@ test('callRpc rejects when sidecar stdout is not valid JSON', async () => {
 
 test('callRpc defaults args to an empty array', async () => {
   let capturedArgs: string[] = []
-  mock.module('@tauri-apps/plugin-shell', () => ({
-    Command: {
-      sidecar: (_bin: string, args: string[]) => {
-        capturedArgs = args
-        return { execute: async () => ({ code: 0, stdout: JSON.stringify({ ok: true, data: [] }), stderr: '' }) }
-      },
-    },
-  }))
+  spyOn(Command, 'sidecar').mockImplementation(((_bin: string, args: string[]) => {
+    capturedArgs = args
+    return { execute: async () => ({ code: 0, stdout: JSON.stringify({ ok: true, data: [] }), stderr: '' }) }
+  }) as unknown as typeof Command.sidecar)
   const { callRpc } = await import('../rpc')
   await callRpc('list')
   expect(capturedArgs).toEqual(['__rpc', 'list', '[]'])
