@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 type Category = 'all' | 'provider' | 'skill' | 'mcp'
 
@@ -8,17 +9,13 @@ interface CategoryTabsProps {
   active: Category
 }
 
-const TABS: { value: Category; label: string }[] = [
-  { value: 'all',      label: 'All' },
-  { value: 'provider', label: 'Providers' },
-  { value: 'skill',    label: 'Skills' },
-  { value: 'mcp',      label: 'MCPs' },
-]
+const TAB_VALUES: Category[] = ['all', 'provider', 'skill', 'mcp']
 
 export function CategoryTabs({ active }: CategoryTabsProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const t = useTranslations('store.categories')
 
   function handleSelect(value: Category) {
     const params = new URLSearchParams(searchParams.toString())
@@ -31,23 +28,20 @@ export function CategoryTabs({ active }: CategoryTabsProps) {
   }
 
   return (
-    <div
-      role="tablist"
-      className="flex gap-1 rounded-lg border border-ray-border bg-ray-surface-1 p-1"
-    >
-      {TABS.map((tab) => (
+    <div role="tablist" className="flex gap-1 rounded-lg border border-store-border bg-store-panel p-1">
+      {TAB_VALUES.map((value) => (
         <button
-          key={tab.value}
+          key={value}
           role="tab"
-          aria-selected={active === tab.value}
-          onClick={() => handleSelect(tab.value)}
+          aria-selected={active === value}
+          onClick={() => handleSelect(value)}
           className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            active === tab.value
-              ? 'bg-ray-surface-3 text-ray-fg'
-              : 'text-ray-fg-secondary hover:text-ray-fg'
+            active === value
+              ? 'bg-store-panel-2 text-store-text'
+              : 'text-store-text-2 hover:text-store-text'
           }`}
         >
-          {tab.label}
+          {t(value)}
         </button>
       ))}
     </div>

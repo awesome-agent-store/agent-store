@@ -4,6 +4,8 @@ import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 const refresh = mock(() => {})
 mock.module('next/navigation', () => ({
   useRouter: () => ({ refresh }),
+  usePathname: () => '/store',
+  useSearchParams: () => new URLSearchParams(),
 }))
 mock.module('next-intl', () => ({
   useLocale: () => 'zh',

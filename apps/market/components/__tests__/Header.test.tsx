@@ -6,7 +6,11 @@ mock.module('next/link', () => ({
     <a href={href} className={className}>{children}</a>
   ),
 }))
-mock.module('next/navigation', () => ({ usePathname: () => '/store', useRouter: () => ({}) }))
+mock.module('next/navigation', () => ({
+  usePathname: () => '/store',
+  useRouter: () => ({}),
+  useSearchParams: () => new URLSearchParams(),
+}))
 mock.module('next-intl', () => ({
   useLocale: () => 'zh',
   useTranslations: () => (key: string) => ({ explore: '探索', docs: '文档', publish: '发布' }[key.split('.').pop() ?? ''] ?? key),
