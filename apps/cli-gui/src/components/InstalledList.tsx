@@ -3,11 +3,13 @@ import type { InstalledItem, ToolTarget } from '@aas/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
+import { ProviderEditModal } from './ProviderEditModal'
 
 export function InstalledList() {
   const { agentApp } = useAppState()
   const { appendLine } = useTerminalLog()
   const [items, setItems] = useState<InstalledItem[]>([])
+  const [editingSlug, setEditingSlug] = useState<string | null>(null)
 
   async function refresh() {
     const result = await callRpc<InstalledItem[]>('list')
@@ -66,6 +68,15 @@ export function InstalledList() {
               >
                 {enabled ? '已启用' : '已禁用'}
               </button>
+              {item.category === 'provider' && (
+                <button
+                  type="button"
+                  onClick={() => setEditingSlug(item.slug)}
+                  className="text-xs text-store-text-2 hover:text-store-text"
+                >
+                  配置
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => uninstall(item)}
@@ -77,6 +88,9 @@ export function InstalledList() {
           </div>
         )
       })}
+      {editingSlug && (
+        <ProviderEditModal slug={editingSlug} open onOpenChange={(open) => { if (!open) setEditingSlug(null) }} />
+      )}
     </div>
   )
 }
