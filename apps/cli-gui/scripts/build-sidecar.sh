@@ -16,4 +16,12 @@ bun build "$ROOT_DIR/apps/cli/src/index.ts" \
   --compile \
   --outfile "$GUI_DIR/src-tauri/binaries/aas-$TRIPLE"
 
+if [[ "$(uname)" == "Darwin" ]]; then
+  # bun --compile emits a Mach-O with a malformed ad-hoc signature on some
+  # bun/macOS combinations, which the kernel refuses to execute (SIGKILL).
+  # Re-signing ad-hoc fixes this without requiring a real signing identity.
+  codesign --remove-signature "$GUI_DIR/src-tauri/binaries/aas-$TRIPLE"
+  codesign --force -s - "$GUI_DIR/src-tauri/binaries/aas-$TRIPLE"
+fi
+
 echo "Built sidecar: src-tauri/binaries/aas-$TRIPLE"

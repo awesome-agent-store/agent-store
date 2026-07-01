@@ -4,6 +4,8 @@ node_modules
 **/node_modules
 dist
 **/dist
+*.tsbuildinfo
+**/*.tsbuildinfo
 .DS_Store
 test-output.txt
 image.png
