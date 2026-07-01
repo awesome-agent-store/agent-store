@@ -4,14 +4,14 @@
 
 **Goal:** Redesign `apps/market`'s browse/detail/publish experience to match `ui/Agent Store.dc.html`'s visual language and drawer/modal interaction model, backed by mock data.
 
-**Architecture:** New design tokens are added to Tailwind (additive, existing `ray-*` tokens stay so untouched pages — `/dashboard`, `/auth/*` — keep working). The store browse page, item/publisher detail, and publish flow are rebuilt as: a real route for the main grid, Radix-Dialog-based drawers/modal rendered via Next.js intercepting + parallel routes (so they're linkable and back-button-friendly), and full-page fallbacks for direct load. All data comes from a new `lib/mock/` module (same shapes as `@aas/types`), not `lib/queries/*`. Client-only state (favorites, install toggle, user-published items, theme, locale) lives in a single React context backed by `localStorage`.
+**Architecture:** New design tokens are added to Tailwind alongside the existing `ray-*` tokens (Task 2), so the app keeps building while every page is migrated one at a time; the last task (Task 15) removes `ray-*` entirely once nothing references it, per the approved design spec's "replace the palette" requirement — this includes migrating `/dashboard` (out of the visual-redesign scope but still on `ray-*`) to the new tokens so it doesn't lose its colors. The store browse page, item/publisher detail, and publish flow are rebuilt as: a real route for the main grid, Radix-Dialog-based drawers/modal rendered via Next.js intercepting + parallel routes (so they're linkable and back-button-friendly), and full-page fallbacks for direct load. All data comes from a new `lib/mock/` module (same shapes as `@aas/types`), not `lib/queries/*`. Client-only state (favorites, install toggle, user-published items, theme, locale) lives in a single React context backed by `localStorage`.
 
 **Tech Stack:** Next.js 14 (App Router), React 18, Tailwind CSS, `@radix-ui/react-dialog`, `lucide-react`, `next-intl` (no URL-prefix routing), Bun test + Testing Library (existing conventions).
 
 ## Global Constraints
 
 - All new UI copy is Simplified Chinese by default, with an English translation available via `next-intl` — no third language is enabled (matches `ui/README.md` LANGS: zh/en enabled, ja/ko/es disabled).
-- Do not remove or rename existing `ray-*` Tailwind tokens, `lib/queries/*`, `lib/db-types.ts`, or any Supabase-backed API route — they're out of scope and other pages depend on them.
+- Do not remove `ray-*` Tailwind tokens before Task 15 — earlier tasks (2–14) must keep the app building by adding `store-*` tokens alongside them, migrating page-by-page; only Task 15 deletes the `ray-*` block, once nothing references it. Do not remove or rename `lib/queries/*` or `lib/db-types.ts`, or any Supabase-backed API route — they're out of scope and other pages depend on them.
 - `/dashboard` and `/auth/*` pages are not touched.
 - No real install/uninstall/network side effects from the Web Store UI — Install/Uninstall/Publish only mutate local React/`localStorage` state.
 - Follow existing test conventions exactly: Bun test + `@testing-library/react`, `happy-dom` environment (already configured), `mock.module('next/link', ...)` pattern for any test that renders a `next/link`-based component (see `components/__tests__/ItemCard.test.tsx`).
@@ -2977,7 +2977,79 @@ git commit -m "feat(market): add publish modal with dynamic field schema, retire
 
 ---
 
-### Task 15: Final integration pass
+### Task 15: Remove the `ray-*` palette, migrate remaining pages
+
+**Files:**
+- Modify: `apps/market/tailwind.config.ts`
+- Modify: `apps/market/app/dashboard/page.tsx`
+- Modify: `apps/market/app/layout.tsx`
+- Delete: `apps/market/app/store/[category]/page.tsx`
+- Delete: `apps/market/components/Readme.tsx`
+- Delete: `apps/market/components/__tests__/Readme.test.tsx` (if it exists — check first)
+
+**Context:** Task 2 added the `store-*` design tokens alongside the existing `ray-*` palette so the app kept building while every page was migrated incrementally (Tasks 7–14). All `ray-*` usages in files this plan actually touches are gone by now. Per the approved design spec, `ray-*` must be fully replaced, not kept as a permanent second palette — this task finishes that migration and removes it. Three loose ends need handling first: `app/dashboard/page.tsx` (out of the visual-redesign scope, but still on `ray-*`, so removing the palette would break its colors), `app/store/[category]/page.tsx` (a pre-existing route that queried Supabase by category — now redundant/orphaned, since the redesigned `app/store/page.tsx` from Task 11 handles category filtering via `?category=` on the same route), and `components/Readme.tsx` (only ever imported by the old detail page, which Task 12 rewrote to no longer use it).
+
+- [ ] **Step 1: Confirm nothing outside this task's file list still references `ray-`**
+
+Run: `cd apps/market && grep -rl "ray-" app components lib`
+Expected output: exactly `app/dashboard/page.tsx`, `app/layout.tsx`, `app/globals.css`, `app/store/[category]/page.tsx`, `components/Readme.tsx`, and possibly `components/__tests__/Readme.test.tsx`. If any other file appears, stop and re-check the corresponding earlier task — it means a `ray-*` usage was missed.
+
+- [ ] **Step 2: Migrate `app/dashboard/page.tsx` to `store-*` tokens**
+
+Replace every `ray-fg` → `store-text`, `ray-fg-secondary` → `store-text-2`, `ray-fg-muted` → `store-text-3`, `ray-border` → `store-border`, `ray-surface-1` → `store-panel`, `ray-surface-2` → `store-panel-2`, `ray-accent` → `store-accent`, `ray-surface-0` → `store-content` (this file's only use of `ray-surface-0` is as a button's foreground color against `ray-accent`'s background — `store-content` is the closest equivalent dark background token). Apply these substitutions throughout the file; the structure and logic are unchanged.
+
+- [ ] **Step 3: Migrate `app/layout.tsx`'s body classes**
+
+Change:
+
+```tsx
+      <body className="min-h-screen bg-ray-surface-0 text-ray-fg antialiased">
+```
+
+to:
+
+```tsx
+      <body className="min-h-screen bg-store-content text-store-text antialiased">
+```
+
+- [ ] **Step 4: Delete the orphaned category route**
+
+```bash
+rm apps/market/app/store/\[category\]/page.tsx
+rmdir "apps/market/app/store/[category]" 2>/dev/null || true
+```
+
+- [ ] **Step 5: Delete the unused `Readme` component**
+
+```bash
+rm apps/market/components/Readme.tsx
+[ -f apps/market/components/__tests__/Readme.test.tsx ] && rm apps/market/components/__tests__/Readme.test.tsx
+```
+
+- [ ] **Step 6: Remove the `ray` color block from `tailwind.config.ts`**
+
+Edit `apps/market/tailwind.config.ts` — delete the entire `ray: { ... }` object under `theme.extend.colors`, keeping the `store: { ... }` object from Task 2 as the only color block.
+
+- [ ] **Step 7: Confirm no `ray-` usage remains**
+
+Run: `cd apps/market && grep -rl "ray-" app components lib`
+Expected: no output (empty — grep exits non-zero when nothing matches, which is expected here).
+
+- [ ] **Step 8: Run the full suite + type-check**
+
+Run: `cd apps/market && bun test && bun run type-check`
+Expected: all pass. If `app/store/[category]/page.tsx` had its own test file, confirm it was removed too (its route no longer exists).
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add -A apps/market
+git commit -m "feat(market): remove ray-* palette, migrate dashboard to store tokens, drop orphaned category route"
+```
+
+---
+
+### Task 16: Final integration pass
 
 **Files:** none created — verification only.
 
