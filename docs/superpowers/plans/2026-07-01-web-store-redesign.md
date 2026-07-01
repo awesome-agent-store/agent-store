@@ -2417,8 +2417,8 @@ export function PublisherDrawer({ publisher, items, open, onOpenChange }: Publis
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-45 bg-black/50" />
-        <Dialog.Content className="fixed right-0 top-0 z-45 flex h-full w-full max-w-md flex-col gap-4 overflow-y-auto border-l border-store-border bg-store-content p-6">
+        <Dialog.Overlay className="fixed inset-0 z-[45] bg-black/50" />
+        <Dialog.Content className="fixed right-0 top-0 z-[45] flex h-full w-full max-w-md flex-col gap-4 overflow-y-auto border-l border-store-border bg-store-content p-6">
           <div className="flex items-start justify-between">
             <div>
               <Dialog.Title className="text-lg font-semibold text-store-text">{publisher.name}</Dialog.Title>
