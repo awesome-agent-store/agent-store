@@ -15,6 +15,7 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   update: (e, a) => e.update(a[0] as string | undefined),
   list: (e, a) => e.list(a[0] as ListOptions | undefined),
   info: (e, a) => e.info(a[0] as string),
+  duplicateProvider: (e, a) => e.duplicateProvider(a[0] as string),
 }
 
 export async function runRpc(

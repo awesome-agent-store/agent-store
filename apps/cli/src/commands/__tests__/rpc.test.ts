@@ -18,6 +18,7 @@ function makeEngine(overrides?: Partial<AASEngine>): AASEngine {
     info: async () => {
       throw new Error('not installed')
     },
+    duplicateProvider: async () => ({ newSlug: 'openai-provider-copy' }),
     ...overrides,
   } as unknown as AASEngine
 }
@@ -72,4 +73,21 @@ test('runRpc defaults to empty args array when jsonArgs is omitted', async () =>
   const code = await runRpc(makeEngine(), ['list'], s => lines.push(s))
   expect(code).toBe(0)
   expect(JSON.parse(lines[0]).data).toEqual([])
+})
+
+test('runRpc calls duplicateProvider with the slug and returns the new slug', async () => {
+  const duplicateProvider = async (slug: string) => {
+    expect(slug).toBe('openai-provider')
+    return { newSlug: 'openai-provider-copy' }
+  }
+  const lines: string[] = []
+  const code = await runRpc(
+    makeEngine({ duplicateProvider: duplicateProvider as AASEngine['duplicateProvider'] }),
+    ['duplicateProvider', '["openai-provider"]'],
+    s => lines.push(s)
+  )
+  expect(code).toBe(0)
+  const parsed = JSON.parse(lines[0])
+  expect(parsed.ok).toBe(true)
+  expect(parsed.data.newSlug).toBe('openai-provider-copy')
 })
