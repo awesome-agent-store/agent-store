@@ -59,6 +59,13 @@ export interface ModelPricing {
   cacheWrite?: number
 }
 
+export interface LocalRelayConfig {
+  id: string
+  name: string
+  port: number
+  enabled: boolean
+}
+
 export interface UsageSummaryRow {
   date: string
   providerSlug: string

@@ -15,5 +15,6 @@ export type {
   ModelPricing,
   UsageSummaryRow,
   UsageSummaryOptions,
+  LocalRelayConfig,
 } from './engine'
 export type { RegistryJson } from './registry'
