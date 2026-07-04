@@ -14,7 +14,7 @@ export interface ProviderConnection {
   pricingUrl?: string
   pricing?: Record<string, ModelPricing>
   homepage?: string
-  endpoint?: string
+  endpointPath?: string
   upstreamProtocol?: string
   level?: number
   whitelist?: string[]
@@ -96,7 +96,7 @@ export async function readProviderConnection(itemDir: string): Promise<ProviderC
       pricingUrl: readString(raw['pricingUrl']),
       pricing: readPricing(raw['pricing']),
       homepage: readString(raw['homepage']),
-      endpoint: readString(raw['endpoint']),
+      endpointPath: readString(raw['endpointPath']),
       upstreamProtocol: readString(raw['upstreamProtocol']),
       level: readNumber(raw['level']),
       whitelist: readStringArray(raw['whitelist']),

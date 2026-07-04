@@ -1,5 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ItemDetail, ModelPricing, ToolTarget } from '@aas/types'
 import { X } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
@@ -14,7 +14,7 @@ interface EditValues {
   apiKey: string
   baseUrl: string
   homepage: string
-  endpoint: string
+  endpointPath: string
   upstreamProtocol: string
   authType: 'bearer' | 'anthropic' | 'custom'
   customHeader: string
@@ -48,7 +48,7 @@ function toEditValues(current: Record<string, unknown> | undefined): EditValues 
     apiKey: String(c['apiKey'] ?? ''),
     baseUrl: String(c['baseUrl'] ?? ''),
     homepage: String(c['homepage'] ?? ''),
-    endpoint: String(c['endpoint'] ?? ''),
+    endpointPath: String(c['endpointPath'] ?? ''),
     upstreamProtocol: String(c['upstreamProtocol'] ?? '自动检测'),
     authType,
     customHeader,
@@ -69,7 +69,7 @@ function toConfigPayload(values: EditValues): Record<string, unknown> {
     apiKey: values.apiKey,
     baseUrl: values.baseUrl,
     homepage: values.homepage,
-    endpoint: values.endpoint,
+    endpointPath: values.endpointPath,
     upstreamProtocol: values.upstreamProtocol,
     authType,
     level: Number(values.level),
@@ -89,6 +89,11 @@ export function ProviderEditModal({ slug, open, onOpenChange }: ProviderEditModa
   const [wlDraft, setWlDraft] = useState('')
   const [mapFromDraft, setMapFromDraft] = useState('')
   const [mapToDraft, setMapToDraft] = useState('')
+  const [errors, setErrors] = useState({ targets: false, apiKey: false })
+  const [showSaved, setShowSaved] = useState(false)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const targetsRef = useRef(targets)
+  targetsRef.current = targets
 
   useEffect(() => {
     if (!open) return
@@ -98,9 +103,32 @@ export function ProviderEditModal({ slug, open, onOpenChange }: ProviderEditModa
     })
   }, [open, slug])
 
-  async function persist(next: EditValues) {
+  useEffect(() => {
+    setErrors({
+      targets: !targets.claude && !targets.codex,
+      apiKey: values.apiKey.trim() === '',
+    })
+  }, [targets, values.apiKey])
+
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+    }
+  }, [])
+
+  function persist(next: EditValues) {
     setValues(next)
-    await callRpc('setConfig', [slug, toConfigPayload(next)])
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      void callRpc('setConfig', [slug, toConfigPayload(next)]).then(() => {
+        const currentTargets = targetsRef.current
+        const isValid = (!!currentTargets.claude || !!currentTargets.codex) && next.apiKey.trim() !== ''
+        if (isValid) {
+          setShowSaved(true)
+          setTimeout(() => setShowSaved(false), 2000)
+        }
+      })
+    }, 500)
   }
 
   async function toggleTarget(target: ToolTarget) {
@@ -150,7 +178,10 @@ export function ProviderEditModal({ slug, open, onOpenChange }: ProviderEditModa
         <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/50" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-[60] max-h-[85vh] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-store-border bg-store-content p-6">
           <div className="mb-4 flex items-center justify-between">
-            <Dialog.Title className="text-lg font-semibold text-store-text">编辑 {slug}</Dialog.Title>
+            <div className="flex items-center gap-2">
+              <Dialog.Title className="text-lg font-semibold text-store-text">编辑 {slug}</Dialog.Title>
+              {showSaved && <span className="text-xs text-store-accent">配置已保存</span>}
+            </div>
             <Dialog.Close aria-label="关闭" className="text-store-text-2 hover:text-store-text">
               <X size={18} />
             </Dialog.Close>
@@ -159,7 +190,7 @@ export function ProviderEditModal({ slug, open, onOpenChange }: ProviderEditModa
           <div className="flex flex-col gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium text-store-text-2">适用客户端</label>
-              <div className="flex gap-2">
+              <div className={`flex gap-2 rounded-lg ${errors.targets ? 'border border-store-red p-1' : ''}`}>
                 {(['claude', 'codex'] as const).map((target) => (
                   <button
                     key={target}
@@ -175,6 +206,7 @@ export function ProviderEditModal({ slug, open, onOpenChange }: ProviderEditModa
                   </button>
                 ))}
               </div>
+              {errors.targets && <p className="mt-1 text-[10px] text-store-red">至少选择一个客户端</p>}
             </div>
 
             <div>
@@ -185,8 +217,11 @@ export function ProviderEditModal({ slug, open, onOpenChange }: ProviderEditModa
                 id="provider-apiKey"
                 value={values.apiKey}
                 onChange={(e) => persist({ ...values, apiKey: e.target.value })}
-                className="w-full rounded-lg border border-store-border bg-store-panel px-3 py-2 text-sm text-store-text"
+                className={`w-full rounded-lg border bg-store-panel px-3 py-2 text-sm text-store-text ${
+                  errors.apiKey ? 'border-store-red' : 'border-store-border'
+                }`}
               />
+              {errors.apiKey && <p className="mt-1 text-[10px] text-store-red">API 密钥不能为空</p>}
             </div>
           </div>
 
@@ -219,8 +254,8 @@ export function ProviderEditModal({ slug, open, onOpenChange }: ProviderEditModa
                 <div>
                   <label className="mb-1 block text-xs font-medium text-store-text-2">API 端点</label>
                   <input
-                    value={values.endpoint}
-                    onChange={(e) => persist({ ...values, endpoint: e.target.value })}
+                    value={values.endpointPath}
+                    onChange={(e) => persist({ ...values, endpointPath: e.target.value })}
                     placeholder="留空使用默认，如 /v1/chat/completions"
                     className="w-full rounded-lg border border-store-border bg-store-panel px-3 py-2 text-sm text-store-text"
                   />

@@ -73,7 +73,7 @@ test('adding a whitelist entry and saving calls setConfig with the updated white
   fireEvent.click(screen.getByText('高级设置'))
   fireEvent.change(screen.getByPlaceholderText('输入模型名称，如 claude-*'), { target: { value: 'gpt-4o' } })
   fireEvent.click(screen.getByText('添加'))
-  await waitFor(() => expect(setConfig).toHaveBeenCalled())
+  await waitFor(() => expect(setConfig).toHaveBeenCalled(), { timeout: 1500 })
   const [, values] = setConfig.mock.calls[setConfig.mock.calls.length - 1] as [string, Record<string, unknown>]
   expect(values.whitelist).toEqual(['claude-*', 'gpt-4o'])
 })
@@ -84,9 +84,61 @@ test('toggling 可用性监控 calls setConfig with healthCheck flipped', async 
   await waitFor(() => screen.getByDisplayValue('sk-real'))
   fireEvent.click(screen.getByText('高级设置'))
   fireEvent.click(screen.getByLabelText('可用性监控'))
-  await waitFor(() => expect(setConfig).toHaveBeenCalled())
+  await waitFor(() => expect(setConfig).toHaveBeenCalled(), { timeout: 1500 })
   const [, values] = setConfig.mock.calls[setConfig.mock.calls.length - 1] as [string, Record<string, unknown>]
   expect(values.healthCheck).toBe(false)
+})
+
+test('editing apiKey does not call setConfig immediately but does after the 500ms debounce', async () => {
+  const setConfig = mock((..._args: unknown[]) => undefined)
+  renderModal({ setConfig })
+  await waitFor(() => screen.getByDisplayValue('sk-real'))
+  fireEvent.change(screen.getByLabelText('API 密钥'), { target: { value: 'sk-new' } })
+  expect(setConfig).not.toHaveBeenCalled()
+  await waitFor(() => expect(setConfig).toHaveBeenCalledTimes(1), { timeout: 1500 })
+})
+
+test('rapid successive edits within the debounce window only trigger one setConfig call', async () => {
+  const setConfig = mock((..._args: unknown[]) => undefined)
+  renderModal({ setConfig })
+  const input = await waitFor(() => screen.getByDisplayValue('sk-real'))
+  fireEvent.change(input, { target: { value: 'sk-a' } })
+  fireEvent.change(input, { target: { value: 'sk-ab' } })
+  fireEvent.change(input, { target: { value: 'sk-abc' } })
+  await waitFor(() => expect(setConfig).toHaveBeenCalledTimes(1), { timeout: 1500 })
+  const [, values] = setConfig.mock.calls[0] as [string, Record<string, unknown>]
+  expect(values.apiKey).toBe('sk-abc')
+})
+
+test('an empty apiKey shows the red error state and skips the 配置已保存 indicator', async () => {
+  const setConfig = mock((..._args: unknown[]) => undefined)
+  renderModal({ setConfig })
+  await waitFor(() => screen.getByDisplayValue('sk-real'))
+  fireEvent.change(screen.getByLabelText('API 密钥'), { target: { value: '' } })
+  expect(await screen.findByText('API 密钥不能为空')).toBeInTheDocument()
+  await waitFor(() => expect(setConfig).toHaveBeenCalledTimes(1), { timeout: 1500 })
+  expect(screen.queryByText('配置已保存')).not.toBeInTheDocument()
+})
+
+test('disabling all targets shows the red error state and skips the 配置已保存 indicator', async () => {
+  const setConfig = mock((..._args: unknown[]) => undefined)
+  const disable = mock(() => undefined)
+  renderModal({ setConfig, disable })
+  await waitFor(() => screen.getByLabelText('Codex'))
+  fireEvent.click(screen.getByLabelText('Codex'))
+  await waitFor(() => expect(disable).toHaveBeenCalledWith('yls-me', 'codex'))
+  expect(await screen.findByText('至少选择一个客户端')).toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText('API 密钥'), { target: { value: 'sk-still-valid' } })
+  await waitFor(() => expect(setConfig).toHaveBeenCalledTimes(1), { timeout: 1500 })
+  expect(screen.queryByText('配置已保存')).not.toBeInTheDocument()
+})
+
+test('valid apiKey and targets show 配置已保存 after the debounced save fires', async () => {
+  const setConfig = mock((..._args: unknown[]) => undefined)
+  renderModal({ setConfig })
+  await waitFor(() => screen.getByDisplayValue('sk-real'))
+  fireEvent.change(screen.getByLabelText('API 密钥'), { target: { value: 'sk-valid' } })
+  await waitFor(() => expect(screen.getByText('配置已保存')).toBeInTheDocument(), { timeout: 1500 })
 })
 
 test('解析定价 button calls parsePricingFromUrl and fills the pricing table for review', async () => {

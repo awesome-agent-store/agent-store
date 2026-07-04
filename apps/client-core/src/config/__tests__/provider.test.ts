@@ -107,11 +107,11 @@ test('readProviderConnection ignores a malformed pricing entry (non-numeric inpu
   expect(conn.pricing).toBeUndefined()
 })
 
-test('readProviderConnection reads homepage, endpoint, upstreamProtocol, level, whitelist, healthCheck', async () => {
+test('readProviderConnection reads homepage, endpointPath, upstreamProtocol, level, whitelist, healthCheck', async () => {
   await writeFile(join(dir, 'config.json'), JSON.stringify({
     apiKey: 'k',
     homepage: 'https://docs.example.com',
-    endpoint: '/v1/chat/completions',
+    endpointPath: '/v1/chat/completions',
     upstreamProtocol: 'openai_chat',
     level: 2,
     whitelist: ['claude-*', 'gpt-4o'],
@@ -119,7 +119,7 @@ test('readProviderConnection reads homepage, endpoint, upstreamProtocol, level, 
   }))
   const conn = await readProviderConnection(dir)
   expect(conn.homepage).toBe('https://docs.example.com')
-  expect(conn.endpoint).toBe('/v1/chat/completions')
+  expect(conn.endpointPath).toBe('/v1/chat/completions')
   expect(conn.upstreamProtocol).toBe('openai_chat')
   expect(conn.level).toBe(2)
   expect(conn.whitelist).toEqual(['claude-*', 'gpt-4o'])
@@ -130,7 +130,7 @@ test('readProviderConnection returns undefined for absent new fields', async () 
   await writeFile(join(dir, 'config.json'), JSON.stringify({ apiKey: 'k' }))
   const conn = await readProviderConnection(dir)
   expect(conn.homepage).toBeUndefined()
-  expect(conn.endpoint).toBeUndefined()
+  expect(conn.endpointPath).toBeUndefined()
   expect(conn.upstreamProtocol).toBeUndefined()
   expect(conn.level).toBeUndefined()
   expect(conn.whitelist).toBeUndefined()

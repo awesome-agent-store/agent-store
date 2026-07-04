@@ -127,9 +127,9 @@ test('returns 403 and does not forward when the requested model is not in the wh
   expect(called).toBe(false)
 })
 
-test('forwards to the endpoint override path instead of the route default when connection.endpoint is set', async () => {
+test('forwards to the endpoint override path instead of the route default when connection.endpointPath is set', async () => {
   await installProvider('test-provider', { claude: true }, {
-    apiKey: 'sk-test', baseUrl: 'https://upstream.example.com', endpoint: '/v1/chat/completions',
+    apiKey: 'sk-test', baseUrl: 'https://upstream.example.com', endpointPath: '/v1/chat/completions',
   })
 
   let capturedUrl: string | undefined

@@ -61,7 +61,7 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
         )
       }
 
-      const forwardPath = connection.endpoint || url.pathname
+      const forwardPath = connection.endpointPath || url.pathname
       const startedAt = Date.now()
       const upstreamResponse = await forwardRequest(
         forwardPath,
