@@ -25,7 +25,11 @@ export function reconcileRelayInstances(
 
   for (const [id, cfg] of desiredEnabled) {
     if (!running.has(id)) {
-      running.set(id, start(cfg))
+      try {
+        running.set(id, start(cfg))
+      } catch (err) {
+        console.error(`[relay-daemon] failed to start local relay config "${cfg.name}" (${id}) on port ${cfg.port}:`, err)
+      }
     }
   }
 }

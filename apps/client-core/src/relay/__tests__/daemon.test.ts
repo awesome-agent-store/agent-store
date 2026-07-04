@@ -94,6 +94,40 @@ test('handles multiple configs independently', () => {
   expect(running.size).toBe(2)
 })
 
+test('a start failure for one config does not prevent other configs from starting, and does not throw', () => {
+  const running = new Map<string, RunningRelayInstance>()
+  const started: string[] = []
+  const start = (cfg: LocalRelayConfig): RunningRelayInstance => {
+    if (cfg.id === 'bad') throw new Error('EADDRINUSE: address already in use')
+    started.push(cfg.id)
+    return { id: cfg.id, port: cfg.port, stop: () => {} }
+  }
+
+  expect(() => {
+    reconcileRelayInstances([config('good', 18780), config('bad', 18880)], running, start)
+  }).not.toThrow()
+
+  expect(started).toEqual(['good'])
+  expect(running.has('good')).toBe(true)
+  expect(running.has('bad')).toBe(false)
+})
+
+test('a config that failed to start is retried on the next reconcile call', () => {
+  const running = new Map<string, RunningRelayInstance>()
+  let shouldFail = true
+  const start = (cfg: LocalRelayConfig): RunningRelayInstance => {
+    if (shouldFail) throw new Error('EADDRINUSE')
+    return { id: cfg.id, port: cfg.port, stop: () => {} }
+  }
+
+  reconcileRelayInstances([config('a', 18780)], running, start)
+  expect(running.has('a')).toBe(false)
+
+  shouldFail = false
+  reconcileRelayInstances([config('a', 18780)], running, start)
+  expect(running.has('a')).toBe(true)
+})
+
 test('runRelayDaemon starts a real server per enabled config and stops it on abort', async () => {
   const { mkdtemp, rm, writeFile } = await import('fs/promises')
   const { join } = await import('path')
