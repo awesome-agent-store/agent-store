@@ -448,7 +448,7 @@ test('高级设置 is collapsed by default and expands to show whitelist/mapping
 })
 
 test('adding a whitelist entry and saving calls setConfig with the updated whitelist array', async () => {
-  const setConfig = mock(() => undefined)
+  const setConfig = mock((..._args: unknown[]) => undefined)
   renderModal({ setConfig })
   await waitFor(() => screen.getByDisplayValue('sk-real'))
   fireEvent.click(screen.getByText('高级设置'))
@@ -460,7 +460,7 @@ test('adding a whitelist entry and saving calls setConfig with the updated white
 })
 
 test('toggling 可用性监控 calls setConfig with healthCheck flipped', async () => {
-  const setConfig = mock(() => undefined)
+  const setConfig = mock((..._args: unknown[]) => undefined)
   renderModal({ setConfig })
   await waitFor(() => screen.getByDisplayValue('sk-real'))
   fireEvent.click(screen.getByText('高级设置'))
