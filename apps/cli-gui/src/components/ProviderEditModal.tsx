@@ -92,6 +92,7 @@ export function ProviderEditModal({ slug, open, onOpenChange }: ProviderEditModa
   const [errors, setErrors] = useState({ targets: false, apiKey: false })
   const [showSaved, setShowSaved] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savedBadgeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const targetsRef = useRef(targets)
   targetsRef.current = targets
 
@@ -113,6 +114,7 @@ export function ProviderEditModal({ slug, open, onOpenChange }: ProviderEditModa
   useEffect(() => {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
+      if (savedBadgeTimer.current) clearTimeout(savedBadgeTimer.current)
     }
   }, [])
 
@@ -125,7 +127,8 @@ export function ProviderEditModal({ slug, open, onOpenChange }: ProviderEditModa
         const isValid = (!!currentTargets.claude || !!currentTargets.codex) && next.apiKey.trim() !== ''
         if (isValid) {
           setShowSaved(true)
-          setTimeout(() => setShowSaved(false), 2000)
+          if (savedBadgeTimer.current) clearTimeout(savedBadgeTimer.current)
+          savedBadgeTimer.current = setTimeout(() => setShowSaved(false), 2000)
         }
       })
     }, 500)
