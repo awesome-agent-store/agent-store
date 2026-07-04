@@ -148,3 +148,83 @@ test('forwards to the endpoint override path instead of the route default when c
 
   expect(capturedUrl).toBe('https://upstream.example.com/v1/chat/completions')
 })
+
+async function installProviders(entries: Array<{ slug: string; enabledFor: Record<string, boolean>; config: Record<string, unknown> }>) {
+  const items: InstalledItem[] = entries.map(({ slug, enabledFor }) => ({
+    slug, category: 'provider', version: '1.0.0',
+    installedAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    compatibleWith: ['claude', 'codex'], enabledFor,
+  }))
+  await writeRegistry(aasHome, { installed: items })
+  for (const { slug, config } of entries) {
+    const dir = itemDir(aasHome, 'provider', slug)
+    await mkdir(dir, { recursive: true })
+    await writeFile(join(dir, 'config.json'), JSON.stringify(config))
+  }
+}
+
+test('with two enabled providers, tries the higher-priority (lower level) one first', async () => {
+  await installProviders([
+    { slug: 'low-priority', enabledFor: { claude: true }, config: { apiKey: 'k1', baseUrl: 'https://low.example.com', level: 5 } },
+    { slug: 'high-priority', enabledFor: { claude: true }, config: { apiKey: 'k2', baseUrl: 'https://high.example.com', level: 1 } },
+  ])
+
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+  stop = server.stop
+
+  await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+
+  expect(calls).toEqual(['https://high.example.com/v1/messages'])
+})
+
+test('falls back to the next-priority provider when the first returns a 5xx, and records is_fallback', async () => {
+  await installProviders([
+    { slug: 'flaky', enabledFor: { claude: true }, config: { apiKey: 'k1', baseUrl: 'https://flaky.example.com', level: 1 } },
+    { slug: 'reliable', enabledFor: { claude: true }, config: { apiKey: 'k2', baseUrl: 'https://reliable.example.com', level: 2 } },
+  ])
+
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    if (url.startsWith('https://flaky')) return new Response('boom', { status: 502 })
+    return new Response(JSON.stringify({ usage: { input_tokens: 1, output_tokens: 1 } }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })
+  }) as typeof fetch
+
+  const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+  stop = server.stop
+
+  const res = await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+
+  expect(calls).toEqual(['https://flaky.example.com/v1/messages', 'https://reliable.example.com/v1/messages'])
+  expect(res.status).toBe(200)
+})
+
+test('does not fall back when the first provider returns a 4xx', async () => {
+  await installProviders([
+    { slug: 'rejects', enabledFor: { claude: true }, config: { apiKey: 'k1', baseUrl: 'https://rejects.example.com', level: 1 } },
+    { slug: 'backup', enabledFor: { claude: true }, config: { apiKey: 'k2', baseUrl: 'https://backup.example.com', level: 2 } },
+  ])
+
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    return new Response('bad request', { status: 400 })
+  }) as typeof fetch
+
+  const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+  stop = server.stop
+
+  const res = await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+
+  expect(calls).toEqual(['https://rejects.example.com/v1/messages'])
+  expect(res.status).toBe(400)
+})

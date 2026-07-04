@@ -1,5 +1,6 @@
 import type { ProviderAuthType } from '../config/provider'
 import { applyModelMapping } from './model-mapping'
+import { isModelAllowed } from './model-whitelist'
 
 export interface ForwardTarget {
   baseUrl: string
@@ -35,4 +36,61 @@ export async function forwardRequest(
     headers,
     body: JSON.stringify(mappedBody),
   })
+}
+
+export interface FailoverCandidate {
+  slug: string
+  connection: ForwardTarget
+  endpointPath?: string
+  whitelist?: string[]
+}
+
+export interface FailoverResult {
+  response: Response
+  usedSlug: string
+  isFallback: boolean
+}
+
+export async function forwardWithFailover(
+  defaultPath: string,
+  body: unknown,
+  requestedModel: string | undefined,
+  candidates: FailoverCandidate[],
+  fetchImpl: typeof fetch = fetch
+): Promise<FailoverResult> {
+  let lastResponse: Response | undefined
+  let lastIndex = 0
+
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[i]!
+    lastIndex = i
+
+    if (requestedModel && !isModelAllowed(requestedModel, candidate.whitelist)) {
+      lastResponse = Response.json(
+        { error: `model ${requestedModel} is not in the whitelist for provider ${candidate.slug}` },
+        { status: 403 }
+      )
+      continue
+    }
+
+    let response: Response
+    try {
+      response = await forwardRequest(candidate.endpointPath || defaultPath, body, candidate.connection, fetchImpl)
+    } catch (err) {
+      lastResponse = Response.json(
+        { error: `upstream request to ${candidate.slug} failed: ${String(err)}` },
+        { status: 502 }
+      )
+      continue
+    }
+
+    if (response.status >= 500) {
+      lastResponse = response
+      continue
+    }
+
+    return { response, usedSlug: candidate.slug, isFallback: i > 0 }
+  }
+
+  return { response: lastResponse!, usedSlug: candidates[lastIndex]!.slug, isFallback: lastIndex > 0 }
 }

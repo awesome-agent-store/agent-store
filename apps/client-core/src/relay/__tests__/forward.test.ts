@@ -1,5 +1,5 @@
 import { test, expect, mock } from 'bun:test'
-import { forwardRequest } from '../forward'
+import { forwardRequest, forwardWithFailover } from '../forward'
 
 function fakeFetch(capture: { url?: string; init?: RequestInit }) {
   return (async (url: string, init?: RequestInit) => {
@@ -49,4 +49,167 @@ test('returns the raw Response from the upstream call', async () => {
   const response = await forwardRequest('/v1/messages', { model: 'x' }, { baseUrl: 'https://api.example.com', apiKey: 'sk-test' }, fakeFetch({}))
   expect(response.status).toBe(200)
   expect(await response.json()).toEqual({ ok: true })
+})
+
+test('forwardWithFailover uses the first candidate when it succeeds', async () => {
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const result = await forwardWithFailover(
+    '/v1/messages',
+    { model: 'claude-3-5-sonnet' },
+    'claude-3-5-sonnet',
+    [
+      { slug: 'primary', connection: { baseUrl: 'https://primary.example', apiKey: 'k1' } },
+      { slug: 'backup', connection: { baseUrl: 'https://backup.example', apiKey: 'k2' } },
+    ],
+    fetchImpl
+  )
+
+  expect(calls).toEqual(['https://primary.example/v1/messages'])
+  expect(result.usedSlug).toBe('primary')
+  expect(result.isFallback).toBe(false)
+  expect(result.response.status).toBe(200)
+})
+
+test('forwardWithFailover falls back to the next candidate on a network error', async () => {
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    if (url.startsWith('https://primary')) throw new Error('connect timeout')
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const result = await forwardWithFailover(
+    '/v1/messages',
+    { model: 'claude-3-5-sonnet' },
+    'claude-3-5-sonnet',
+    [
+      { slug: 'primary', connection: { baseUrl: 'https://primary.example', apiKey: 'k1' } },
+      { slug: 'backup', connection: { baseUrl: 'https://backup.example', apiKey: 'k2' } },
+    ],
+    fetchImpl
+  )
+
+  expect(calls).toEqual(['https://primary.example/v1/messages', 'https://backup.example/v1/messages'])
+  expect(result.usedSlug).toBe('backup')
+  expect(result.isFallback).toBe(true)
+  expect(result.response.status).toBe(200)
+})
+
+test('forwardWithFailover falls back to the next candidate on a 5xx response', async () => {
+  const fetchImpl = (async (url: string) => {
+    if (url.startsWith('https://primary')) return new Response('boom', { status: 502 })
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const result = await forwardWithFailover(
+    '/v1/messages', {}, undefined,
+    [
+      { slug: 'primary', connection: { baseUrl: 'https://primary.example', apiKey: 'k1' } },
+      { slug: 'backup', connection: { baseUrl: 'https://backup.example', apiKey: 'k2' } },
+    ],
+    fetchImpl
+  )
+
+  expect(result.usedSlug).toBe('backup')
+  expect(result.isFallback).toBe(true)
+})
+
+test('forwardWithFailover does not fall back on a 4xx response', async () => {
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    return new Response('bad request', { status: 400 })
+  }) as typeof fetch
+
+  const result = await forwardWithFailover(
+    '/v1/messages', {}, undefined,
+    [
+      { slug: 'primary', connection: { baseUrl: 'https://primary.example', apiKey: 'k1' } },
+      { slug: 'backup', connection: { baseUrl: 'https://backup.example', apiKey: 'k2' } },
+    ],
+    fetchImpl
+  )
+
+  expect(calls).toEqual(['https://primary.example/v1/messages'])
+  expect(result.usedSlug).toBe('primary')
+  expect(result.isFallback).toBe(false)
+  expect(result.response.status).toBe(400)
+})
+
+test('forwardWithFailover returns the last response when every candidate fails', async () => {
+  const fetchImpl = (async (_url: string) => new Response('down', { status: 503 })) as typeof fetch
+
+  const result = await forwardWithFailover(
+    '/v1/messages', {}, undefined,
+    [
+      { slug: 'primary', connection: { baseUrl: 'https://primary.example', apiKey: 'k1' } },
+      { slug: 'backup', connection: { baseUrl: 'https://backup.example', apiKey: 'k2' } },
+    ],
+    fetchImpl
+  )
+
+  expect(result.usedSlug).toBe('backup')
+  expect(result.isFallback).toBe(true)
+  expect(result.response.status).toBe(503)
+})
+
+test('forwardWithFailover skips a candidate whose whitelist rejects the model', async () => {
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const result = await forwardWithFailover(
+    '/v1/messages', { model: 'gpt-4o' }, 'gpt-4o',
+    [
+      { slug: 'claude-only', connection: { baseUrl: 'https://primary.example', apiKey: 'k1' }, whitelist: ['claude-*'] },
+      { slug: 'any-model', connection: { baseUrl: 'https://backup.example', apiKey: 'k2' } },
+    ],
+    fetchImpl
+  )
+
+  expect(calls).toEqual(['https://backup.example/v1/messages'])
+  expect(result.usedSlug).toBe('any-model')
+  expect(result.isFallback).toBe(true)
+})
+
+test('forwardWithFailover returns a synthesized 403 when every candidate rejects the model', async () => {
+  let called = false
+  const fetchImpl = (async (_url: string) => {
+    called = true
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const result = await forwardWithFailover(
+    '/v1/messages', { model: 'gpt-4o' }, 'gpt-4o',
+    [{ slug: 'claude-only', connection: { baseUrl: 'https://primary.example', apiKey: 'k1' }, whitelist: ['claude-*'] }],
+    fetchImpl
+  )
+
+  expect(called).toBe(false)
+  expect(result.usedSlug).toBe('claude-only')
+  expect(result.isFallback).toBe(false)
+  expect(result.response.status).toBe(403)
+})
+
+test('forwardWithFailover uses a candidate\'s own endpointPath override instead of the default path', async () => {
+  let capturedUrl = ''
+  const fetchImpl = (async (url: string) => {
+    capturedUrl = url
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  await forwardWithFailover(
+    '/v1/messages', {}, undefined,
+    [{ slug: 'custom', connection: { baseUrl: 'https://primary.example', apiKey: 'k1' }, endpointPath: '/v1/chat/completions' }],
+    fetchImpl
+  )
+
+  expect(capturedUrl).toBe('https://primary.example/v1/chat/completions')
 })
