@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Heart } from 'lucide-react'
+import { Copy, Heart } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
@@ -49,7 +49,19 @@ export function DetailPanel() {
       <div className="flex items-start gap-4">
         <div className="h-12 w-12 shrink-0 rounded-xl bg-store-panel-2" />
         <div>
-          <h2 className="text-lg font-semibold text-store-text">{detail.name}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-store-text">{detail.name}</h2>
+            {detail.publisher.tier === 'official' && (
+              <span className="rounded-full bg-store-amber/10 px-2 py-0.5 text-[10px] font-medium text-store-amber">
+                官方
+              </span>
+            )}
+            {!detail.installed && detail.status === 'published' && (
+              <span className="rounded-full bg-store-green/10 px-2 py-0.5 text-[10px] font-medium text-store-green">
+                已发布
+              </span>
+            )}
+          </div>
           <p className="text-xs text-store-text-2">
             {detail.publisher.name} · ↓ {detail.downloads} · ★ {rating} · {CATEGORY_LABEL[detail.category]}
           </p>
@@ -84,8 +96,16 @@ export function DetailPanel() {
         </button>
       </div>
 
-      <div className="mt-4 rounded-lg bg-black px-3 py-2 font-mono text-xs text-store-text-2">
-        $ agent-store add {detail.slug}
+      <div className="mt-4 flex items-center justify-between rounded-lg bg-black px-3 py-2 font-mono text-xs text-store-text-2">
+        <span>$ agent-store add {detail.slug}</span>
+        <button
+          type="button"
+          aria-label="复制安装命令"
+          onClick={() => navigator.clipboard?.writeText(`agent-store add ${detail.slug}`)}
+          className="text-store-text-3 hover:text-store-text"
+        >
+          <Copy size={12} />
+        </button>
       </div>
 
       <div className="mt-4 flex gap-4 border-b border-store-border text-sm">

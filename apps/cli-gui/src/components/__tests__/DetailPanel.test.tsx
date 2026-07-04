@@ -114,3 +114,67 @@ test('clicking the heart button toggles favorite state', async () => {
   fireEvent.click(screen.getByLabelText('收藏'))
   expect(screen.getByLabelText('取消收藏')).toBeInTheDocument()
 })
+
+test('shows an 官方 badge for an official-tier publisher and no 已发布 badge for an installed item', async () => {
+  mockRpc({
+    info: () => ({
+      slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
+      name: 'filesystem', description: 'desc', readmeUrl: '', icon: '', publisher, tags: [], downloads: 0,
+    }),
+  })
+  renderPanel()
+  fireEvent.click(screen.getByText('select'))
+  await waitFor(() => screen.getByText('filesystem'))
+  expect(screen.getByText('官方')).toBeInTheDocument()
+  expect(screen.queryByText('已发布')).not.toBeInTheDocument()
+})
+
+test('does not show an 官方 badge for a community-tier publisher', async () => {
+  const communityPublisher = { ...publisher, tier: 'community' as const }
+  mockRpc({
+    info: () => ({
+      slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
+      name: 'filesystem', description: 'desc', readmeUrl: '', icon: '', publisher: communityPublisher, tags: [], downloads: 0,
+    }),
+  })
+  renderPanel()
+  fireEvent.click(screen.getByText('select'))
+  await waitFor(() => screen.getByText('filesystem'))
+  expect(screen.queryByText('官方')).not.toBeInTheDocument()
+})
+
+test('shows a 已发布 badge for a not-yet-installed published catalog item', async () => {
+  mockRpc({
+    info: () => { throw new Error('Item not installed: filesystem') },
+    search: () => [{
+      id: 'i1', slug: 'filesystem', name: 'filesystem', description: '读写本地文件系统',
+      readmeUrl: '', icon: '', category: 'mcp', version: '0.8.1', publisher,
+      compatibleWith: ['claude'], tags: [], downloads: 10, rating: 4.5, status: 'published',
+      installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+      configSchema: {},
+    }],
+  })
+  renderPanel()
+  fireEvent.click(screen.getByText('select'))
+  await waitFor(() => screen.getByText('filesystem'))
+  expect(screen.getByText('已发布')).toBeInTheDocument()
+})
+
+test('clicking the copy button copies the install command to the clipboard', async () => {
+  const writeText = mock(() => Promise.resolve())
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  mockRpc({
+    info: () => ({
+      slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
+      name: 'filesystem', description: 'desc', readmeUrl: '', icon: '', publisher, tags: [], downloads: 0,
+    }),
+  })
+  renderPanel()
+  fireEvent.click(screen.getByText('select'))
+  await waitFor(() => screen.getByLabelText('复制安装命令'))
+  fireEvent.click(screen.getByLabelText('复制安装命令'))
+  expect(writeText).toHaveBeenCalledWith('agent-store add filesystem')
+})

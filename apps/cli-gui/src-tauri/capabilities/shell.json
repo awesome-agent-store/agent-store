@@ -6,7 +6,7 @@
   "permissions": [
     {
       "identifier": "shell:allow-execute",
-      "allow": [{ "name": "binaries/aas", "sidecar": true }]
+      "allow": [{ "name": "binaries/aas", "sidecar": true, "args": true }]
     }
   ]
 }
