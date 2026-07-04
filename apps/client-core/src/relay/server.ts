@@ -3,6 +3,7 @@ import { readRegistry } from '../registry/index'
 import { itemDir } from '../paths'
 import { readProviderConnection } from '../config/provider'
 import { forwardRequest } from './forward'
+import { recordUsageAsync } from '../usage/record-usage'
 
 export const RELAY_PORT = 18780
 
@@ -49,6 +50,7 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
       }
 
       const body = await req.json().catch(() => ({}))
+      const startedAt = Date.now()
       const upstreamResponse = await forwardRequest(
         url.pathname,
         body,
@@ -60,6 +62,22 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
         },
         fetchImpl
       )
+
+      const contentType = upstreamResponse.headers.get('content-type') ?? ''
+      const isStreaming = contentType.includes('text/event-stream')
+      const requestedModel = typeof (body as Record<string, unknown>)['model'] === 'string'
+        ? (body as Record<string, unknown>)['model'] as string
+        : 'unknown'
+
+      if (upstreamResponse.body) {
+        const [clientStream, usageStream] = upstreamResponse.body.tee()
+        void recordUsageAsync({
+          aasHome, providerSlug: provider.slug, target, model: requestedModel,
+          pricing: connection.pricing, bodyStream: usageStream, isStreaming,
+          statusCode: upstreamResponse.status, startedAt,
+        })
+        return new Response(clientStream, { status: upstreamResponse.status, headers: upstreamResponse.headers })
+      }
 
       return new Response(upstreamResponse.body, {
         status: upstreamResponse.status,
