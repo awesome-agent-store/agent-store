@@ -4,6 +4,7 @@ import type {
   AASEngine, AASPaths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema,
   UsageSummaryRow, UsageSummaryOptions, ModelPricing, RegistryJson, LocalRelayConfig,
+  RecentRequestRow,
 } from '@aas/types'
 import { AASClient } from '@aas/sdk'
 import { resolvePaths, itemDir } from './paths'
@@ -16,7 +17,7 @@ import { syncItemToClaude, enableRelayForClaude, disableRelayForClaude } from '.
 import { syncItemToCodex, enableRelayForCodex, disableRelayForCodex } from './config/codex'
 import { checkUpdates as _checkUpdates, applyUpdate } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
-import { getDailySummary } from './usage/queries'
+import { getDailySummary, getRecentRequests } from './usage/queries'
 import {
   listLocalConfigs as _listLocalConfigs, addLocalConfig as _addLocalConfig,
   removeLocalConfig as _removeLocalConfig, updateLocalConfig as _updateLocalConfig,
@@ -280,6 +281,10 @@ export class AASEngineImpl implements AASEngine {
 
   async getUsageSummary(options?: UsageSummaryOptions): Promise<UsageSummaryRow[]> {
     return getDailySummary(this.paths.aasHome, options)
+  }
+
+  async getRecentRequests(options?: { limit?: number }): Promise<RecentRequestRow[]> {
+    return getRecentRequests(this.paths.aasHome, options)
   }
 
   async parsePricingFromUrl(_url: string): Promise<Record<string, ModelPricing>> {

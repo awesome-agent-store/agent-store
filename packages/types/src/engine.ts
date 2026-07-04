@@ -87,6 +87,23 @@ export interface UsageSummaryOptions {
   target?: ToolTarget
 }
 
+export interface RecentRequestRow {
+  id: number
+  createdAt: string
+  providerSlug: string
+  target: string
+  model: string
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  costUsd: number | null
+  statusCode: number
+  latencyMs: number
+  isStreaming: boolean
+  isFallback: boolean
+}
+
 /** A registry entry — shape stored in ~/.agents/registry.json and returned by AASEngine.list() */
 export interface InstalledItem {
   slug: string
@@ -166,6 +183,8 @@ export interface AASEngine {
   duplicateProvider(slug: string): Promise<{ newSlug: string }>
   /** Returns daily usage/cost rollups, optionally filtered by provider or target. */
   getUsageSummary(options?: UsageSummaryOptions): Promise<UsageSummaryRow[]>
+  /** Returns the N most recent raw request-log rows, newest first. */
+  getRecentRequests(options?: { limit?: number }): Promise<RecentRequestRow[]>
   /** Fetches a provider's pricing page and extracts a draft pricing table for user review. Returns mock data in this iteration. */
   parsePricingFromUrl(url: string): Promise<Record<string, ModelPricing>>
   /** Lists all local relay listen-port configurations. */

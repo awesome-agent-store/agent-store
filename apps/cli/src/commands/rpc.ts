@@ -17,6 +17,7 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   info: (e, a) => e.info(a[0] as string),
   duplicateProvider: (e, a) => e.duplicateProvider(a[0] as string),
   getUsageSummary: (e, a) => e.getUsageSummary(a[0] as UsageSummaryOptions | undefined),
+  getRecentRequests: (e, a) => e.getRecentRequests(a[0] as { limit?: number } | undefined),
   parsePricingFromUrl: (e, a) => e.parsePricingFromUrl(a[0] as string),
   listLocalConfigs: (e) => e.listLocalConfigs(),
   addLocalConfig: (e, a) => e.addLocalConfig(a[0] as string),

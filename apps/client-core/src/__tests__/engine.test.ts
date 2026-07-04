@@ -514,6 +514,21 @@ test('getUsageSummary: forwards the target filter through to the query', async (
   expect(rows).toHaveLength(0)
 })
 
+test('getRecentRequests returns rows from the usage database', async () => {
+  const { openUsageDb } = await import('../usage/db')
+  const db = openUsageDb(aasHome)
+  db.run(
+    `INSERT INTO request_logs (created_at, provider_slug, target, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, status_code, latency_ms, is_streaming, is_fallback)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ['2026-07-01T00:00:00Z', 'provider-a', 'claude', 'claude-3-5-sonnet', 100, 50, 0, 0, 0.005, 200, 1200, 1, 0]
+  )
+
+  const rows = await engine.getRecentRequests()
+
+  expect(rows).toHaveLength(1)
+  expect(rows[0]!.providerSlug).toBe('provider-a')
+})
+
 test('parsePricingFromUrl: returns a non-empty mock pricing table', async () => {
   const pricing = await engine.parsePricingFromUrl('https://example.com/pricing')
   expect(Object.keys(pricing).length).toBeGreaterThan(0)

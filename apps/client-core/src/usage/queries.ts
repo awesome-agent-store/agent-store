@@ -72,3 +72,63 @@ export function getDailySummary(aasHome: string, options: GetDailySummaryOptions
     costUsd: row.cost_usd,
   }))
 }
+
+export interface RecentRequestRow {
+  id: number
+  createdAt: string
+  providerSlug: string
+  target: string
+  model: string
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  costUsd: number | null
+  statusCode: number
+  latencyMs: number
+  isStreaming: boolean
+  isFallback: boolean
+}
+
+interface RequestLogRow {
+  id: number
+  created_at: string
+  provider_slug: string
+  target: string
+  model: string
+  input_tokens: number
+  output_tokens: number
+  cache_read_tokens: number
+  cache_write_tokens: number
+  cost_usd: number | null
+  status_code: number
+  latency_ms: number
+  is_streaming: number
+  is_fallback: number
+}
+
+export function getRecentRequests(aasHome: string, options: { limit?: number } = {}): RecentRequestRow[] {
+  const db = openUsageDb(aasHome)
+  const limit = options.limit ?? 20
+
+  const rows = db
+    .query(`SELECT * FROM request_logs ORDER BY id DESC LIMIT ?`)
+    .all(limit) as RequestLogRow[]
+
+  return rows.map((row) => ({
+    id: row.id,
+    createdAt: row.created_at,
+    providerSlug: row.provider_slug,
+    target: row.target,
+    model: row.model,
+    inputTokens: row.input_tokens,
+    outputTokens: row.output_tokens,
+    cacheReadTokens: row.cache_read_tokens,
+    cacheWriteTokens: row.cache_write_tokens,
+    costUsd: row.cost_usd,
+    statusCode: row.status_code,
+    latencyMs: row.latency_ms,
+    isStreaming: row.is_streaming === 1,
+    isFallback: row.is_fallback === 1,
+  }))
+}
