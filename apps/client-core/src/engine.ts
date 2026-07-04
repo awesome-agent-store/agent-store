@@ -3,7 +3,7 @@ import { join } from 'path'
 import type {
   AASEngine, AASPaths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema,
-  UsageSummaryRow, UsageSummaryOptions, ModelPricing,
+  UsageSummaryRow, UsageSummaryOptions, ModelPricing, RegistryJson,
 } from '@aas/types'
 import { AASClient } from '@aas/sdk'
 import { resolvePaths, itemDir } from './paths'
@@ -73,7 +73,9 @@ export class AASEngineImpl implements AASEngine {
     if (!entry) throw new Error(`Item not installed: ${slug}`)
     for (const target of entry.compatibleWith) {
       if (entry.enabledFor[target]) {
-        await this._syncToTarget(slug, entry.category, target, 'remove')
+        if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(registry, slug, target)) {
+          await this._syncToTarget(slug, entry.category, target, 'remove')
+        }
       }
     }
     await rm(itemDir(this.paths.aasHome, entry.category, slug), { recursive: true, force: true })
@@ -99,7 +101,9 @@ export class AASEngineImpl implements AASEngine {
     const registry = await readRegistry(this.paths.aasHome)
     const entry = findEntry(registry, slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
-    await this._syncToTarget(slug, entry.category, target, 'remove')
+    if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(registry, slug, target)) {
+      await this._syncToTarget(slug, entry.category, target, 'remove')
+    }
     await writeRegistry(
       this.paths.aasHome,
       upsertEntry(registry, {
@@ -277,6 +281,16 @@ export class AASEngineImpl implements AASEngine {
     return {
       'example-model': { input: 1, output: 5 },
     }
+  }
+
+  private _hasOtherEnabledProvider(registry: RegistryJson, excludeSlug: string, target: ToolTarget): boolean {
+    return registry.installed.some(
+      (item) =>
+        item.slug !== excludeSlug &&
+        item.category === 'provider' &&
+        item.compatibleWith.includes(target) &&
+        item.enabledFor[target] === true
+    )
   }
 
   private async _syncToTarget(

@@ -228,3 +228,27 @@ test('does not fall back when the first provider returns a 4xx', async () => {
   expect(calls).toEqual(['https://rejects.example.com/v1/messages'])
   expect(res.status).toBe(400)
 })
+
+test('falls back to the next provider when the first one whitelist-rejects the model', async () => {
+  await installProviders([
+    { slug: 'claude-only', enabledFor: { codex: true }, config: { apiKey: 'k1', baseUrl: 'https://claude-only.example.com', level: 1, whitelist: ['claude-*'] } },
+    { slug: 'any-model', enabledFor: { codex: true }, config: { apiKey: 'k2', baseUrl: 'https://any-model.example.com', level: 2 } },
+  ])
+
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+  stop = server.stop
+
+  const res = await fetch(`http://127.0.0.1:${server.port}/responses`, {
+    method: 'POST',
+    body: JSON.stringify({ model: 'gpt-4o' }),
+  })
+
+  expect(calls).toEqual(['https://any-model.example.com/responses'])
+  expect(res.status).toBe(200)
+})

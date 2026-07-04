@@ -347,6 +347,66 @@ test('disable on a provider item restores Claude settings via the relay snapshot
   expect(env['ANTHROPIC_AUTH_TOKEN']).toBe('pre-existing-token')
 })
 
+test('disabling one of two enabled providers keeps the relay connected for the survivor', async () => {
+  const secondProviderItem: ProviderItem = {
+    ...providerItem,
+    slug: 'test-provider-2',
+    name: 'Second Provider',
+  }
+  mockFetch({
+    '/api/items/test-provider': { item: providerItem },
+    '/api/items/test-provider-2': { item: secondProviderItem },
+  })
+  await engine.install('test-provider')
+  await engine.install('test-provider-2')
+  await engine.setConfig('test-provider', { apiKey: 'sk-1', baseUrl: 'https://api.one.example/v1' })
+  await engine.setConfig('test-provider-2', { apiKey: 'sk-2', baseUrl: 'https://api.two.example/v1' })
+
+  await engine.enable('test-provider', 'claude')
+  await engine.enable('test-provider-2', 'claude')
+  await engine.disable('test-provider', 'claude')
+
+  const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8')) as Record<string, unknown>
+  const env = settings['env'] as Record<string, unknown>
+  expect(env['ANTHROPIC_BASE_URL']).toBe('http://127.0.0.1:18780')
+  expect(env['ANTHROPIC_AUTH_TOKEN']).toBe('aas-relay')
+
+  const list = await engine.list()
+  const first = list.find(item => item.slug === 'test-provider')
+  const second = list.find(item => item.slug === 'test-provider-2')
+  expect(first?.enabledFor.claude).toBe(false)
+  expect(second?.enabledFor.claude).toBe(true)
+})
+
+test('uninstalling one of two enabled providers keeps the relay connected for the survivor', async () => {
+  const secondProviderItem: ProviderItem = {
+    ...providerItem,
+    slug: 'test-provider-2',
+    name: 'Second Provider',
+  }
+  mockFetch({
+    '/api/items/test-provider': { item: providerItem },
+    '/api/items/test-provider-2': { item: secondProviderItem },
+  })
+  await engine.install('test-provider')
+  await engine.install('test-provider-2')
+  await engine.setConfig('test-provider', { apiKey: 'sk-1', baseUrl: 'https://api.one.example/v1' })
+  await engine.setConfig('test-provider-2', { apiKey: 'sk-2', baseUrl: 'https://api.two.example/v1' })
+
+  await engine.enable('test-provider', 'claude')
+  await engine.enable('test-provider-2', 'claude')
+  await engine.uninstall('test-provider')
+
+  const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8')) as Record<string, unknown>
+  const env = settings['env'] as Record<string, unknown>
+  expect(env['ANTHROPIC_BASE_URL']).toBe('http://127.0.0.1:18780')
+  expect(env['ANTHROPIC_AUTH_TOKEN']).toBe('aas-relay')
+
+  const list = await engine.list()
+  expect(list.find(item => item.slug === 'test-provider')).toBeUndefined()
+  expect(list.find(item => item.slug === 'test-provider-2')?.enabledFor.claude).toBe(true)
+})
+
 test('enable on a provider item points Codex at the relay instead of writing the real apiKey', async () => {
   mockFetch({ '/api/items/test-provider': { item: providerItem } })
   await engine.install('test-provider')
