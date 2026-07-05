@@ -82,32 +82,11 @@ export function Overview() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-6">
-      <h1 className="text-lg font-semibold text-store-text">概览</h1>
-
-      <div className="grid grid-cols-3 gap-4">
-        {CATEGORY_CARDS.map(({ category, label }) => (
-          <button
-            key={category}
-            type="button"
-            onClick={() => goToCategory(category)}
-            className="flex items-center justify-between gap-3 rounded-xl border border-store-border bg-store-panel p-4 text-left hover:border-store-border-strong"
-          >
-            <div className="flex items-center gap-3">
-              <CategoryIcon category={category} />
-              <span className="text-xs font-medium text-store-text-2">{label}</span>
-            </div>
-            <span className="text-2xl font-semibold text-store-text">
-              {installed.filter((i) => i.category === category).length}
-            </span>
-          </button>
-        ))}
-      </div>
-
+    <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-6">
       <div className="rounded-xl border border-store-border bg-store-panel p-4">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-store-accent-soft text-store-accent">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-store-panel-2 text-store-text">
               <TrendingUp size={16} />
             </div>
             <div>
@@ -135,9 +114,9 @@ export function Overview() {
           </div>
         </div>
 
-        <UsageTrendChart rows={last7Days} />
+        <UsageTrendChart rows={activePeriodRows()} />
 
-        <div className="mt-4 grid grid-cols-4 gap-3 text-xs">
+        <div className="mt-3 grid grid-cols-4 gap-3 border-t border-store-border pt-3 text-xs">
           <div className="rounded-lg bg-store-accent-soft p-3">
             <p className="text-store-text-2">总费用</p>
             <p className="mt-1 text-base font-semibold text-store-text">${summarize(activePeriodRows()).costUsd.toFixed(4)}</p>
@@ -150,64 +129,117 @@ export function Overview() {
             <p className="text-store-text-2">总请求数</p>
             <p className="mt-1 text-base font-semibold text-store-text">{summarize(activePeriodRows()).requestCount}</p>
           </div>
-          <div className="rounded-lg bg-store-accent-soft p-3">
+          <div className="rounded-lg bg-store-purple-soft p-3">
             <p className="text-store-text-2">模型分布</p>
             <p className="mt-1 text-base font-semibold text-store-text">{summarize(activePeriodRows()).modelCount}</p>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-4">
-        <button
-          type="button"
-          onClick={() => {
-            setCategoryFilter('provider')
-            setNavView('browse')
-            setSelectedSlug(LOCAL_PROVIDER_SENTINEL)
-          }}
-          className="flex flex-[1.4] flex-col gap-3 rounded-xl border border-store-border bg-store-panel p-4 text-left hover:border-store-border-strong"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-store-accent-soft text-store-accent">
-                <RadioTower size={16} />
-              </div>
-              <p className="text-sm font-medium text-store-text">local</p>
-            </div>
-            <span className={`flex items-center gap-1.5 text-xs ${relayStatus.running ? 'text-store-green' : 'text-store-text-2'}`}>
-              {relayStatus.running && <span className="h-1.5 w-1.5 rounded-full bg-store-green" />}
-              {relayStatus.running ? '运行中' : '未运行'}
+      <div className="grid grid-cols-3 gap-3">
+        {CATEGORY_CARDS.map(({ category, label }) => (
+          <button
+            key={category}
+            type="button"
+            onClick={() => goToCategory(category)}
+            className="flex items-center gap-3 rounded-xl border border-store-border bg-store-panel p-4 text-left hover:border-store-border-strong"
+          >
+            <CategoryIcon category={category} />
+            <span className="flex-1 text-xs font-medium text-store-text-2">{label}</span>
+            <span className="text-2xl font-semibold text-store-text">
+              {installed.filter((i) => i.category === category).length}
             </span>
-          </div>
-          <div className="grid grid-cols-3 gap-3 text-xs text-store-text-2">
-            <div>
-              <p>监听地址</p>
-              <p className="mt-1 font-mono text-sm text-store-text">
-                127.0.0.1{localConfigs[0] ? `:${localConfigs[0].port}` : ''}
-              </p>
-            </div>
-            <div>
-              <p>今日请求</p>
-              <p className="mt-1 text-sm font-semibold text-store-text">{summarize(today).requestCount}</p>
-            </div>
-            <div>
-              <p>成功率</p>
-              <p className="mt-1 text-sm font-semibold text-store-green">{successRateLabel(summarize(today))}</p>
-            </div>
-          </div>
-        </button>
+          </button>
+        ))}
+      </div>
 
-        {updates.length > 0 && (
-          <div className="flex-1 rounded-xl border border-store-border bg-store-panel p-4">
-            <div className="mb-2 flex items-center justify-between">
+      <div className="grid items-start gap-3" style={{ gridTemplateColumns: '1.4fr 1fr' }}>
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setCategoryFilter('provider')
+              setNavView('browse')
+              setSelectedSlug(LOCAL_PROVIDER_SENTINEL)
+            }}
+            className="flex flex-col gap-3 rounded-xl border border-store-border bg-store-panel p-4 text-left hover:border-store-border-strong"
+          >
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-store-text">可更新</p>
+                <div
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-white"
+                  style={{ background: 'linear-gradient(135deg, #7c82ff, #b06ad9)' }}
+                >
+                  <RadioTower size={15} />
+                </div>
+                <p className="font-mono text-sm font-semibold text-store-text">local</p>
+              </div>
+              <span className={`flex items-center gap-1.5 text-xs font-semibold ${relayStatus.running ? 'text-store-green' : 'text-store-text-3'}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${relayStatus.running ? 'bg-store-green' : 'bg-store-text-3'}`} />
+                {relayStatus.running ? '运行中' : '已停止'}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-xs text-store-text-2">
+              <div>
+                <p>监听地址</p>
+                <p className="mt-1 font-mono text-sm font-semibold text-store-accent">
+                  127.0.0.1{localConfigs[0] ? `:${localConfigs[0].port}` : ''}
+                </p>
+              </div>
+              <div>
+                <p>今日请求</p>
+                <p className="mt-1 text-sm font-semibold text-store-text">{summarize(today).requestCount}</p>
+              </div>
+              <div>
+                <p>成功率</p>
+                <p className="mt-1 text-sm font-semibold text-store-green">{successRateLabel(summarize(today))}</p>
+              </div>
+            </div>
+          </button>
+
+          <div className="rounded-xl border border-store-border bg-store-panel p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-medium text-store-text">最近请求</p>
+              <button type="button" onClick={() => setLogModalOpen(true)} className="text-xs text-store-accent hover:opacity-80">
+                查看全部
+              </button>
+            </div>
+            <div className="flex flex-col gap-1">
+              {recentRequests.map((row) => (
+                <div key={row.id} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-1.5 w-1.5 rounded-full ${row.statusCode < 400 ? 'bg-store-green' : 'bg-store-red'}`} />
+                    <span className="font-medium text-store-text">{row.target === 'claude' ? 'Claude Code' : 'Codex'}</span>
+                    <span className="font-mono text-store-text-2">
+                      {row.model} → {row.providerSlug}
+                      {row.isFallback ? '（降级）' : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-store-text-3">
+                    <span>{row.latencyMs}ms</span>
+                    <span className={row.statusCode < 400 ? 'text-store-green' : 'text-store-red'}>{row.statusCode}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-store-border bg-store-panel p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-store-text">可更新</p>
+              {updates.length > 0 && (
                 <span className="rounded-full bg-store-amber-soft px-1.5 py-0.5 text-[10px] font-medium text-store-amber">
                   {updates.length}
                 </span>
-              </div>
-              <span className="text-xs text-store-accent">全部</span>
+              )}
             </div>
+            <button type="button" onClick={() => goToCategory('provider')} className="text-xs font-medium text-store-accent hover:underline">
+              全部
+            </button>
+          </div>
+          {updates.length > 0 && (
             <div className="flex flex-col gap-2">
               {updates.slice(0, 4).map((item) => {
                 const category = installed.find((i) => i.slug === item.slug)?.category ?? 'mcp'
@@ -233,34 +265,7 @@ export function Overview() {
                 )
               })}
             </div>
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-store-border bg-store-panel p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-medium text-store-text">最近请求</p>
-          <button type="button" onClick={() => setLogModalOpen(true)} className="text-xs text-store-accent hover:opacity-80">
-            查看全部
-          </button>
-        </div>
-        <div className="flex flex-col gap-1">
-          {recentRequests.map((row) => (
-            <div key={row.id} className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <span className={`h-1.5 w-1.5 rounded-full ${row.statusCode < 400 ? 'bg-store-green' : 'bg-store-red'}`} />
-                <span className="font-medium text-store-text">{row.target === 'claude' ? 'Claude Code' : 'Codex'}</span>
-                <span className="font-mono text-store-text-2">
-                  {row.model} → {row.providerSlug}
-                  {row.isFallback ? '（降级）' : ''}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-store-text-3">
-                <span>{row.latencyMs}ms</span>
-                <span className={row.statusCode < 400 ? 'text-store-green' : 'text-store-red'}>{row.statusCode}</span>
-              </div>
-            </div>
-          ))}
+          )}
         </div>
       </div>
 

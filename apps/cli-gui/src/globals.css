@@ -24,6 +24,8 @@
   --red: #f3675f;
   --provider: #58a6f0;
   --provider-soft: rgba(88, 166, 240, 0.16);
+  --purple: #a874e0;
+  --purple-soft: rgba(168, 116, 224, 0.12);
 }
 
 body {

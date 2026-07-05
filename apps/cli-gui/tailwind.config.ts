@@ -27,6 +27,8 @@ const config: Config = {
           red: 'var(--red)',
           provider: 'var(--provider)',
           'provider-soft': 'var(--provider-soft)',
+          purple: 'var(--purple)',
+          'purple-soft': 'var(--purple-soft)',
         },
       },
     },

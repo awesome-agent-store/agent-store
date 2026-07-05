@@ -27,7 +27,8 @@ test('renders an svg polyline and a filled area path with one point per distinct
   expect(polyline).not.toBeNull()
   const points = polyline!.getAttribute('points')!.trim().split(' ')
   expect(points).toHaveLength(2)
-  expect(container.querySelector('path')).not.toBeNull()
+  expect(container.querySelector('polygon')).not.toBeNull()
+  expect(container.querySelectorAll('circle')).toHaveLength(2)
 })
 
 test('renders a flat line with no crash when there is no data', () => {

@@ -25,7 +25,7 @@ test('renders the icon rail and the Overview dashboard by default', async () => 
 
   expect(screen.getByLabelText('概览')).toBeInTheDocument()
   expect(screen.getByLabelText('供应商')).toBeInTheDocument()
-  expect(await screen.findByText('概览')).toBeInTheDocument()
+  expect(await screen.findByText('消耗趋势')).toBeInTheDocument()
   expect(await screen.findByText('供应商')).toBeInTheDocument()
 })
 
