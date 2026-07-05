@@ -87,7 +87,7 @@ test('install mcp: creates item dir, manifest, registry entry', async () => {
   expect(reg.installed[0].enabledFor).toEqual({})
 })
 
-test('install throws when market returns error', async () => {
+test('install throws when store returns error', async () => {
   mockFetch({ '/api/items/unknown': { error: 'not found' } })
   globalThis.fetch = (async () => new Response(JSON.stringify({ error: 'not found' }), { status: 404 })) as unknown as typeof fetch
   await expect(engine.install('unknown')).rejects.toThrow()

@@ -28,9 +28,9 @@ function Pill({ children }: { children: string }) {
 }
 
 const RESOURCE_ROWS: Record<'provider' | 'skill' | 'mcp', string[]> = {
-  provider: ['官网 / 文档', 'Marketplace 页面'],
-  skill: ['官网 / 文档', '源码仓库 (GitHub)', 'Marketplace 页面'],
-  mcp: ['官网 / 文档', '源码仓库 (GitHub)', 'Marketplace 页面'],
+  provider: ['官网 / 文档', 'Store 页面'],
+  skill: ['官网 / 文档', '源码仓库 (GitHub)', 'Store 页面'],
+  mcp: ['官网 / 文档', '源码仓库 (GitHub)', 'Store 页面'],
 }
 
 function formatDate(value?: string): string {

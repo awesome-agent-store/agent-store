@@ -29,9 +29,9 @@ export class AASEngineImpl implements AASEngine {
   private readonly paths: Required<AASPaths>
   private readonly client: AASClient
 
-  constructor(pathOverrides?: Partial<AASPaths>, marketUrl?: string) {
+  constructor(pathOverrides?: Partial<AASPaths>, storeUrl?: string) {
     this.paths = resolvePaths(pathOverrides)
-    this.client = new AASClient(marketUrl)
+    this.client = new AASClient(storeUrl)
   }
 
   async search(query: string, options?: SearchOptions): Promise<Item[]> {

@@ -4,8 +4,8 @@ import type { Item } from '@aas/types'
 
 describe('AASClient constructor', () => {
   test('uses provided baseUrl', () => {
-    const client = new AASClient('https://market.example.com')
-    expect(client.baseUrl).toBe('https://market.example.com')
+    const client = new AASClient('https://store.example.com')
+    expect(client.baseUrl).toBe('https://store.example.com')
   })
 
   test('defaults to http://localhost:3000', () => {
@@ -14,8 +14,8 @@ describe('AASClient constructor', () => {
   })
 
   test('strips trailing slash from baseUrl', () => {
-    const client = new AASClient('https://market.example.com/')
-    expect(client.baseUrl).toBe('https://market.example.com')
+    const client = new AASClient('https://store.example.com/')
+    expect(client.baseUrl).toBe('https://store.example.com')
   })
 })
 

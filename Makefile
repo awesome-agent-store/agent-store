@@ -1,7 +1,7 @@
 # Makefile — Local development workflow for ai-agent-store
 # Requires: supabase CLI, Docker, pnpm, Bun
 
-.PHONY: setup seed dev dev-gui build-cli e2e stop status
+.PHONY: setup seed dev dev-api dev-gui build-cli e2e stop status
 
 ## One-time setup: install CLI, init, start Supabase, seed data, create .env.local
 setup:
@@ -24,12 +24,25 @@ dev:
 	supabase start
 	pnpm --filter=@aas/store dev
 
+## Start the standalone catalog API server (apps/api) on :3001.
+## Reads Supabase creds from apps/store/.env.local (NEXT_PUBLIC_SUPABASE_* fallback).
+## Both the web store and the CLI consume this API — the CLI points at it via AAS_STORE_URL.
+dev-api:
+	supabase start
+	set -a; . apps/store/.env.local; set +a; \
+	PORT=3001 pnpm --filter=@aas/api start
+
 ## Start GUI client test environment in isolated /tmp dirs — never touches your
-## real ~/.claude, ~/.codex, or ~/.agents. Builds the sidecar, then launches
-## the Tauri dev window against throwaway config directories.
+## real ~/.claude, ~/.codex, or ~/.agents. Starts the catalog API (apps/api) in the
+## background, then launches the Tauri dev window pointed at it via AAS_STORE_URL.
 dev-gui:
 	@mkdir -p /tmp/aas-gui-dev /tmp/claude-gui-dev /tmp/codex-gui-dev
+	supabase start
+	set -a; . apps/store/.env.local; set +a; \
+	PORT=3001 pnpm --filter=@aas/api start & API_PID=$$!; \
+	trap "kill $$API_PID 2>/dev/null" EXIT; \
 	AAS_HOME=/tmp/aas-gui-dev \
+	AAS_STORE_URL=http://127.0.0.1:3001 \
 	CLAUDE_CONFIG_DIR=/tmp/claude-gui-dev \
 	CODEX_CONFIG_DIR=/tmp/codex-gui-dev \
 	pnpm --filter=@aas/cli-gui tauri:dev

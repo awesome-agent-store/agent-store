@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc --noEmit && vite build",
     "tauri": "tauri",
     "build:sidecar": "bash scripts/build-sidecar.sh",
     "tauri:dev": "bun run build:sidecar && tauri dev",

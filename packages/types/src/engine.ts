@@ -125,7 +125,7 @@ export interface InstalledItem {
 }
 
 /**
- * Full item detail — union of market metadata and local install state.
+ * Full item detail — union of store metadata and local install state.
  * Returned by AASEngine.info(). Category-specific fields are optional
  * and only populated for the relevant category.
  */
@@ -138,7 +138,7 @@ export interface ItemDetail {
   updatedAt: string
   compatibleWith: ToolTarget[]
   enabledFor: Partial<Record<ToolTarget, boolean>>
-  // Market metadata
+  // Store metadata
   name: string
   description: string
   readmeUrl: string

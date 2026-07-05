@@ -45,13 +45,13 @@ test('资源 section renders the mockup decorative row list for mcp items', () =
   expect(screen.getByText('资源')).toBeInTheDocument()
   expect(screen.getByText('官网 / 文档')).toBeInTheDocument()
   expect(screen.getByText('源码仓库 (GitHub)')).toBeInTheDocument()
-  expect(screen.getByText('Marketplace 页面')).toBeInTheDocument()
+  expect(screen.getByText('Store 页面')).toBeInTheDocument()
 })
 
 test('资源 section renders only the provider-specific rows for a provider item', () => {
   render(<InfoSidebar detail={installedDetail({ category: 'provider' })} />)
   expect(screen.getByText('官网 / 文档')).toBeInTheDocument()
-  expect(screen.getByText('Marketplace 页面')).toBeInTheDocument()
+  expect(screen.getByText('Store 页面')).toBeInTheDocument()
   expect(screen.queryByText('源码仓库 (GitHub)')).not.toBeInTheDocument()
 })
 

@@ -22,7 +22,7 @@ const USAGE = `aas — AI Agent Store CLI
 Usage: aas <command> [options]
 
 Commands:
-  search <query>                   Search the market
+  search <query>                   Search the store
   install <slug>                   Install an item (or update if already installed)
   uninstall <slug>                 Uninstall an item
   enable <slug> --for <tool>       Enable for claude or codex
