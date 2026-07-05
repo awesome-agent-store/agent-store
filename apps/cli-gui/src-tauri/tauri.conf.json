@@ -12,8 +12,8 @@
     "windows": [
       {
         "title": "Agent Store CLI",
-        "width": 800,
-        "height": 600,
+        "width": 1200,
+        "height": 764,
         "resizable": true,
         "fullscreen": false
       }

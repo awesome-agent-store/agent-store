@@ -311,27 +311,35 @@ export function ResourceList() {
         <div>
           <div
             onClick={() => selectResource(LOCAL_PROVIDER_SENTINEL)}
-            className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
+            className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 ${
               selectedSlug === LOCAL_PROVIDER_SENTINEL ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
             }`}
           >
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-store-accent-soft text-store-accent">
-                <RadioTower size={16} />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm font-bold text-store-text">local</span>
-                <span className="rounded-full bg-store-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-store-accent">内置</span>
-              </div>
+            <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-store-accent-soft text-store-accent">
+              <RadioTower size={16} />
             </div>
-            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-              <span className="text-xs text-store-text-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="whitespace-nowrap font-mono text-sm font-bold text-store-text">local</span>
+                <span className="whitespace-nowrap rounded-full bg-store-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-store-accent">
+                  内置
+                </span>
+              </div>
+              <div className="truncate text-[10.5px] text-store-text-3">
                 {localConfigs.length} 个配置 · {localConfigs.filter((c) => c.enabled).length} 个运行中
-              </span>
-              <button type="button" aria-label="新增本地监听配置" onClick={addLocalPort} className="text-store-text-2 hover:text-store-text">
-                +
-              </button>
+              </div>
             </div>
+            <button
+              type="button"
+              aria-label="新增本地监听配置"
+              onClick={(e) => {
+                e.stopPropagation()
+                addLocalPort()
+              }}
+              className="shrink-0 text-store-text-2 hover:text-store-text"
+            >
+              +
+            </button>
           </div>
           <div className="mt-1 flex flex-col gap-1">
             {localConfigs.map((config) => (
