@@ -22,10 +22,10 @@ function makeEngine(overrides?: Partial<AASEngine>): AASEngine {
     getUsageSummary: async () => [],
     parsePricingFromUrl: async () => ({}),
     listLocalConfigs: async () => [],
-    addLocalConfig: async () => ({ id: 'x', name: 'x', port: 18780, enabled: true }),
+    addLocalConfig: async () => ({ id: 'x', name: 'x', port: 18780, enabled: true, enabledFor: { claude: true, codex: true } }),
     removeLocalConfig: async () => undefined,
-    updateLocalConfig: async () => ({ id: 'x', name: 'x', port: 18780, enabled: true }),
-    toggleLocalConfig: async () => ({ id: 'x', name: 'x', port: 18780, enabled: true }),
+    updateLocalConfig: async () => ({ id: 'x', name: 'x', port: 18780, enabled: true, enabledFor: { claude: true, codex: true } }),
+    toggleLocalConfig: async () => ({ id: 'x', name: 'x', port: 18780, enabled: true, enabledFor: { claude: true, codex: true } }),
     ...overrides,
   } as unknown as AASEngine
 }

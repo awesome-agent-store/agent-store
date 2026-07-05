@@ -23,7 +23,11 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   listLocalConfigs: (e) => e.listLocalConfigs(),
   addLocalConfig: (e, a) => e.addLocalConfig(a[0] as string),
   removeLocalConfig: (e, a) => e.removeLocalConfig(a[0] as string),
-  updateLocalConfig: (e, a) => e.updateLocalConfig(a[0] as string, a[1] as { name?: string; port?: number }),
+  updateLocalConfig: (e, a) =>
+    e.updateLocalConfig(
+      a[0] as string,
+      a[1] as { name?: string; port?: number; enabledFor?: Partial<Record<ToolTarget, boolean>> }
+    ),
   toggleLocalConfig: (e, a) => e.toggleLocalConfig(a[0] as string),
 }
 

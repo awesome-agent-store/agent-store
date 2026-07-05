@@ -1,16 +1,24 @@
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
-import type { LocalRelayConfig } from '@aas/types'
+import type { LocalRelayConfig, ToolTarget } from '@aas/types'
 import { RELAY_PORT } from './server'
 
 const CONFIG_FILE = 'relay-configs.json'
-const SEED_CONFIG: LocalRelayConfig = { id: 'default', name: '默认', port: RELAY_PORT, enabled: true }
+const DEFAULT_ENABLED_FOR: Partial<Record<ToolTarget, boolean>> = { claude: true, codex: true }
+const SEED_CONFIG: LocalRelayConfig = {
+  id: 'default',
+  name: '默认',
+  port: RELAY_PORT,
+  enabled: true,
+  enabledFor: DEFAULT_ENABLED_FOR,
+}
 
 async function readConfigs(aasHome: string): Promise<LocalRelayConfig[]> {
   try {
     const raw = await readFile(join(aasHome, CONFIG_FILE), 'utf-8')
     const parsed = JSON.parse(raw) as LocalRelayConfig[]
-    return parsed.length > 0 ? parsed : [SEED_CONFIG]
+    const withDefaults = parsed.map((c) => ({ ...c, enabledFor: c.enabledFor ?? DEFAULT_ENABLED_FOR }))
+    return withDefaults.length > 0 ? withDefaults : [SEED_CONFIG]
   } catch {
     return [SEED_CONFIG]
   }
@@ -30,7 +38,7 @@ export async function addLocalConfig(aasHome: string, name: string): Promise<Loc
   const usedPorts = new Set(configs.map((c) => c.port))
   let port = SEED_CONFIG.port
   while (usedPorts.has(port)) port += 100
-  const config: LocalRelayConfig = { id: crypto.randomUUID(), name, port, enabled: true }
+  const config: LocalRelayConfig = { id: crypto.randomUUID(), name, port, enabled: true, enabledFor: DEFAULT_ENABLED_FOR }
   await writeConfigs(aasHome, [...configs, config])
   return config
 }
@@ -50,7 +58,7 @@ export async function removeLocalConfig(aasHome: string, id: string): Promise<vo
 export async function updateLocalConfig(
   aasHome: string,
   id: string,
-  patch: { name?: string; port?: number }
+  patch: { name?: string; port?: number; enabledFor?: Partial<Record<ToolTarget, boolean>> }
 ): Promise<LocalRelayConfig> {
   const configs = await readConfigs(aasHome)
   const index = configs.findIndex((c) => c.id === id)
@@ -59,6 +67,7 @@ export async function updateLocalConfig(
     ...configs[index]!,
     ...(patch.name !== undefined ? { name: patch.name } : {}),
     ...(patch.port !== undefined ? { port: patch.port } : {}),
+    ...(patch.enabledFor !== undefined ? { enabledFor: { ...configs[index]!.enabledFor, ...patch.enabledFor } } : {}),
   }
   const next = [...configs]
   next[index] = updated

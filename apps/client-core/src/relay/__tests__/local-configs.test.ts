@@ -18,7 +18,7 @@ afterEach(async () => {
 
 test('listLocalConfigs seeds a default config when no file exists', async () => {
   const configs = await listLocalConfigs(aasHome)
-  expect(configs).toEqual([{ id: 'default', name: '默认', port: 18780, enabled: true }])
+  expect(configs).toEqual([{ id: 'default', name: '默认', port: 18780, enabled: true, enabledFor: { claude: true, codex: true } }])
 })
 
 test('addLocalConfig picks the next free port in +100 increments', async () => {
@@ -48,7 +48,7 @@ test('removeLocalConfig removes the matching entry', async () => {
   const added = await addLocalConfig(aasHome, 'Second')
   await removeLocalConfig(aasHome, added.id)
   const all = await listLocalConfigs(aasHome)
-  expect(all).toEqual([{ id: 'default', name: '默认', port: 18780, enabled: true }])
+  expect(all).toEqual([{ id: 'default', name: '默认', port: 18780, enabled: true, enabledFor: { claude: true, codex: true } }])
 })
 
 test('removeLocalConfig throws when trying to remove the last remaining config', async () => {

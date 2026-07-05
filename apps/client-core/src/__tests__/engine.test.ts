@@ -565,7 +565,7 @@ test('parsePricingFromUrl: returns a non-empty mock pricing table', async () => 
 
 test('listLocalConfigs returns the seeded default when nothing is configured', async () => {
   const configs = await engine.listLocalConfigs()
-  expect(configs).toEqual([{ id: 'default', name: '默认', port: 18780, enabled: true }])
+  expect(configs).toEqual([{ id: 'default', name: '默认', port: 18780, enabled: true, enabledFor: { claude: true, codex: true } }])
 })
 
 test('addLocalConfig, updateLocalConfig, toggleLocalConfig, removeLocalConfig round-trip through the engine', async () => {
@@ -580,7 +580,7 @@ test('addLocalConfig, updateLocalConfig, toggleLocalConfig, removeLocalConfig ro
 
   await engine.removeLocalConfig(added.id)
   const remaining = await engine.listLocalConfigs()
-  expect(remaining).toEqual([{ id: 'default', name: '默认', port: 18780, enabled: true }])
+  expect(remaining).toEqual([{ id: 'default', name: '默认', port: 18780, enabled: true, enabledFor: { claude: true, codex: true } }])
 })
 
 test('getRelayStatus reports not running when no daemon pid file exists', async () => {

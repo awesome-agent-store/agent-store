@@ -69,6 +69,7 @@ export interface LocalRelayConfig {
   name: string
   port: number
   enabled: boolean
+  enabledFor: Partial<Record<ToolTarget, boolean>>
 }
 
 export interface UsageSummaryRow {
@@ -203,7 +204,10 @@ export interface AASEngine {
   /** Removes a local relay configuration. Throws if it's the last remaining one. */
   removeLocalConfig(id: string): Promise<void>
   /** Renames and/or changes the port of a local relay configuration. */
-  updateLocalConfig(id: string, patch: { name?: string; port?: number }): Promise<LocalRelayConfig>
+  updateLocalConfig(
+    id: string,
+    patch: { name?: string; port?: number; enabledFor?: Partial<Record<ToolTarget, boolean>> }
+  ): Promise<LocalRelayConfig>
   /** Flips a local relay configuration's enabled flag. */
   toggleLocalConfig(id: string): Promise<LocalRelayConfig>
 }

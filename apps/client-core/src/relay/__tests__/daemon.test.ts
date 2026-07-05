@@ -3,7 +3,7 @@ import { reconcileRelayInstances, runRelayDaemon, type RunningRelayInstance } fr
 import type { LocalRelayConfig } from '@aas/types'
 
 function config(id: string, port: number, enabled = true, name = id): LocalRelayConfig {
-  return { id, name, port, enabled }
+  return { id, name, port, enabled, enabledFor: { claude: true, codex: true } }
 }
 
 test('starts an instance for a new enabled config', () => {

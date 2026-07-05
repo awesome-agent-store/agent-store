@@ -313,7 +313,10 @@ export class AASEngineImpl implements AASEngine {
     return _removeLocalConfig(this.paths.aasHome, id)
   }
 
-  async updateLocalConfig(id: string, patch: { name?: string; port?: number }): Promise<LocalRelayConfig> {
+  async updateLocalConfig(
+    id: string,
+    patch: { name?: string; port?: number; enabledFor?: Partial<Record<ToolTarget, boolean>> }
+  ): Promise<LocalRelayConfig> {
     return _updateLocalConfig(this.paths.aasHome, id, patch)
   }
 
