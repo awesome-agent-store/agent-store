@@ -4,6 +4,7 @@ import type { Item } from '@as/types'
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import { CATEGORY_META, CategoryGlyph, TIER_META, formatDownloads } from '@/lib/item-meta'
 
 interface FeaturedCarouselProps {
   items: Item[]
@@ -35,6 +36,8 @@ export function FeaturedCarousel({ items }: FeaturedCarouselProps) {
   if (items.length === 0) return null
 
   const current = items[index % items.length]
+  const cat = CATEGORY_META[current.category]
+  const tier = TIER_META[current.publisher.tier]
 
   function go(next: number) {
     setIndex(((next % items.length) + items.length) % items.length)
@@ -42,32 +45,76 @@ export function FeaturedCarousel({ items }: FeaturedCarouselProps) {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-store-border bg-store-panel p-6">
-      <Link href={`/store/${current.category}/${current.slug}`} className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold text-store-text">{current.name}</h2>
-        <p className="line-clamp-2 text-sm text-store-text-2">{current.description}</p>
+    <div className="relative">
+      <Link
+        href={`/store/${current.category}/${current.slug}`}
+        className="flex min-h-[128px] cursor-pointer items-center gap-6 rounded-2xl border border-store-accent p-6"
+        style={{ background: 'linear-gradient(120deg, var(--accent-soft), transparent 62%), var(--panel)' }}
+      >
+        <div
+          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-[30px]"
+          style={{ background: cat.soft, color: cat.color }}
+        >
+          <CategoryGlyph category={current.category} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="rounded bg-store-accent-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-store-accent">
+              本周精选
+            </span>
+            <span className="rounded bg-store-code-bg px-2 py-0.5 text-[10.5px] font-semibold text-store-text-2">
+              {cat.label}
+            </span>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <h2 className="truncate font-mono text-xl font-bold text-store-text">{current.name}</h2>
+            <span
+              className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold"
+              style={{ background: tier.soft, color: tier.color }}
+            >
+              {tier.label}
+            </span>
+          </div>
+          <p className="mt-1.5 line-clamp-2 max-w-[560px] text-[13px] leading-relaxed text-store-text-2">
+            {current.description}
+          </p>
+          <div className="mt-3 flex items-center gap-4 font-mono text-xs">
+            <span className="text-store-text-3">↓ {formatDownloads(current.downloads)}</span>
+            <span className="text-store-star">★ {current.rating.toFixed(1)}</span>
+            <span className="text-store-text-3">v{current.version}</span>
+          </div>
+        </div>
       </Link>
 
-      <div className="mt-4 flex items-center justify-between">
-        <div className="flex gap-1">
-          {items.map((item, i) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-label={`跳转到第 ${i + 1} 项`}
-              onClick={() => go(i)}
-              className={`h-1.5 w-1.5 rounded-full ${i === index ? 'bg-store-accent' : 'bg-store-text-3'}`}
-            />
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <button type="button" aria-label="上一个" onClick={() => go(index - 1)} className="text-store-text-2 hover:text-store-text">
-            <ChevronLeft size={18} />
-          </button>
-          <button type="button" aria-label="下一个" onClick={() => go(index + 1)} className="text-store-text-2 hover:text-store-text">
-            <ChevronRight size={18} />
-          </button>
-        </div>
+      <button
+        type="button"
+        aria-label="上一个"
+        onClick={() => go(index - 1)}
+        className="absolute left-3 top-1/2 flex h-[30px] w-[30px] -translate-y-1/2 items-center justify-center rounded-full border border-store-border bg-store-panel text-store-text-2 hover:border-store-accent hover:text-store-text"
+      >
+        <ChevronLeft size={16} />
+      </button>
+      <button
+        type="button"
+        aria-label="下一个"
+        onClick={() => go(index + 1)}
+        className="absolute right-3 top-1/2 flex h-[30px] w-[30px] -translate-y-1/2 items-center justify-center rounded-full border border-store-border bg-store-panel text-store-text-2 hover:border-store-accent hover:text-store-text"
+      >
+        <ChevronRight size={16} />
+      </button>
+
+      <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
+        {items.map((item, i) => (
+          <button
+            key={item.id}
+            type="button"
+            aria-label={`跳转到第 ${i + 1} 项`}
+            onClick={() => go(i)}
+            className={`h-1.5 rounded-full transition-all ${
+              i === index ? 'w-5 bg-store-accent' : 'w-1.5 bg-store-text-3'
+            }`}
+          />
+        ))}
       </div>
     </div>
   )
