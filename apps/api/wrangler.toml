@@ -14,6 +14,14 @@ compatibility_flags = ["nodejs_compat"]
 [env.test]
 name = "as-api-test"
 
+# Platform-native monitoring: persistent Workers Logs (invocations, errors,
+# console output) viewable in the Cloudflare dashboard. No extra dependency.
+[env.test.observability]
+enabled = true
+
 # Online PRODUCTION environment (filled out later)
 [env.production]
 name = "as-api-prod"
+
+[env.production.observability]
+enabled = true
