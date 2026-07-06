@@ -25,6 +25,7 @@ export function Header({ user }: HeaderProps) {
 
   const isStore = pathname.startsWith('/store')
   const isDocs = pathname.startsWith('/docs')
+  const isPricing = pathname.startsWith('/pricing')
 
   useEffect(() => {
     if (!menuOpen) return
@@ -66,9 +67,9 @@ export function Header({ user }: HeaderProps) {
           <Link href="/docs" className={navItemCls(isDocs)}>
             {t('docs')}
           </Link>
-          <span className="cursor-pointer text-[13.5px] font-medium text-store-text-2 hover:text-store-text">
+          <Link href="/pricing" className={navItemCls(isPricing)}>
             {t('pricing')}
-          </span>
+          </Link>
         </nav>
 
         {isStore && (
