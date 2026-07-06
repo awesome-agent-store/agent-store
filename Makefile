@@ -6,7 +6,7 @@
 ## One-time setup: install CLI, init, start Supabase, seed data, create .env.local
 setup:
 	brew install supabase/tap/supabase
-	supabase init
+	@test -f supabase/config.toml || supabase init
 	supabase start
 	$(MAKE) seed
 	@echo ""

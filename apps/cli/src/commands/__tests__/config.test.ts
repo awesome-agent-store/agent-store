@@ -63,3 +63,30 @@ test('runConfig marks required fields', async () => {
   await runConfig(makeEngine(), ['openai-provider'], prompter, () => {})
   expect(prompted[0]).toContain('required')
 })
+
+test('runConfig prompts required fields first, then optional fields by key', async () => {
+  const prompted: string[] = []
+  const engine = {
+    getConfigSchema: async () => ({
+      schema: {
+        type: 'object',
+        required: ['apiKey'],
+        properties: {
+          model: { type: 'string', description: 'Model', default: 'gpt-4o' },
+          apiKey: { type: 'string', description: 'OpenAI API Key' },
+          baseUrl: { type: 'string', description: 'Base URL', default: 'https://api.openai.com/v1' },
+        },
+      },
+      current: {},
+    }),
+    setConfig: async () => undefined,
+  } as unknown as AASEngine
+
+  const prompter = async (q: string) => { prompted.push(q); return '' }
+  await runConfig(engine, ['openai-provider'], prompter, () => {})
+
+  expect(prompted).toHaveLength(3)
+  expect(prompted[0]).toContain('OpenAI API Key')
+  expect(prompted[1]).toContain('Base URL')
+  expect(prompted[2]).toContain('Model')
+})
