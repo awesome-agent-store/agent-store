@@ -261,7 +261,37 @@ interface GHRepo {
   description: string | null
   stargazers_count: number
   topics?: string[]
+  default_branch?: string
   owner: { login: string; avatar_url: string }
+}
+
+interface GHTree {
+  tree: Array<{ path: string; type: string }>
+  truncated: boolean
+}
+
+// A single SKILL.md discovered inside a repo (a repo may hold many).
+interface SkillCandidate {
+  owner: string
+  repo: string
+  branch: string
+  path: string
+  dir: string
+  rawUrl: string
+  ownerAvatar: string
+  stars: number
+}
+
+// Parse the leading YAML frontmatter of a SKILL.md for its name / description.
+function parseSkillFrontmatter(md: string): { name?: string; description?: string } {
+  const m = md.match(/^---\s*\n([\s\S]*?)\n---/)
+  if (!m) return {}
+  const block = m[1]
+  const strip = (v: string | undefined) => v?.trim().replace(/^["']|["']$/g, '')
+  return {
+    name: strip(block.match(/^name:\s*(.+)$/m)?.[1]),
+    description: strip(block.match(/^description:\s*(.+)$/m)?.[1]),
+  }
 }
 
 // Genuinely real Claude-skill repos, used only if GitHub is rate-limited.
@@ -290,38 +320,73 @@ async function crawlSkills(publishers: Map<string, CrawledPublisher>, taken: Set
     }
   }
 
-  // Filter to repos with a real, non-empty description (skip fallback filter).
   const filtered = usedFallback ? repos : repos.filter((r) => r.description && r.description.trim())
-  console.log(`  [skill] using ${filtered.length} repos from GitHub${usedFallback ? ' (fallback)' : ''}`)
+  console.log(`  [skill] scanning ${filtered.length} repos from GitHub${usedFallback ? ' (fallback)' : ''}`)
 
-  const rows: CrawledItem[] = []
+  // Walk each repo's tree (1 API call per repo) and collect every SKILL.md — a repo
+  // may be a single skill or a collection of many. Stop once we have enough.
+  const candidates: SkillCandidate[] = []
   for (const r of filtered) {
-    if (rows.length >= PER_CATEGORY_LIMIT) break
-    const owner = r.owner.login
-    const pubSlug = sanitizeSlug(owner)
-    if (!publishers.has(pubSlug)) {
-      publishers.set(pubSlug, {
-        slug: pubSlug,
-        name: owner,
-        avatarUrl: r.owner.avatar_url,
-        tier: tierFor(pubSlug),
-        bio: null,
+    if (candidates.length >= PER_CATEGORY_LIMIT) break
+    const [owner, repo] = r.full_name.split('/')
+    const branch = r.default_branch || 'main'
+    let tree: GHTree
+    try {
+      tree = await fetchJson<GHTree>(
+        `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
+        { retries: 1, headers }
+      )
+    } catch (err) {
+      console.warn(`  [skill] tree for ${r.full_name} failed: ${(err as Error).message}`)
+      continue
+    }
+    for (const entry of tree.tree) {
+      if (entry.type !== 'blob') continue
+      if (entry.path !== 'SKILL.md' && !entry.path.endsWith('/SKILL.md')) continue
+      const dir = entry.path === 'SKILL.md' ? repo : entry.path.slice(0, -'/SKILL.md'.length).split('/').pop()!
+      candidates.push({
+        owner,
+        repo,
+        branch,
+        path: entry.path,
+        dir,
+        rawUrl: `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${entry.path}`,
+        ownerAvatar: r.owner.avatar_url,
+        stars: r.stargazers_count,
       })
     }
-    const slug = uniqueSlug(sanitizeSlug(r.name), taken)
-    const [repoOwner, repoName] = r.full_name.split('/')
+  }
+  console.log(`  [skill] found ${candidates.length} SKILL.md files`)
+
+  // For each chosen skill, fetch its raw SKILL.md (not rate-limited) for real
+  // name/description from frontmatter, and emit a file install step that fetches it.
+  const rows: CrawledItem[] = []
+  for (const c of candidates.slice(0, PER_CATEGORY_LIMIT)) {
+    const pubSlug = sanitizeSlug(c.owner)
+    if (!publishers.has(pubSlug)) {
+      publishers.set(pubSlug, { slug: pubSlug, name: c.owner, avatarUrl: c.ownerAvatar, tier: tierFor(pubSlug), bio: null })
+    }
+    let name = c.dir
+    let description = `来自 ${c.owner}/${c.repo} 的 skill。`
+    try {
+      const md = await (await fetch(c.rawUrl, { headers: { 'user-agent': 'agent-store-crawler' } })).text()
+      const fm = parseSkillFrontmatter(md)
+      if (fm.name) name = fm.name
+      if (fm.description) description = fm.description.slice(0, 300)
+    } catch { /* keep dir-derived defaults */ }
+    const slug = uniqueSlug(sanitizeSlug(c.dir === c.repo ? c.repo : `${c.repo}-${c.dir}`), taken)
     rows.push({
       slug,
-      name: r.name,
-      description: r.description || r.name,
+      name,
+      description,
       category: 'skill',
       version: '1.0.0',
       publisherSlug: pubSlug,
       compatibleWith: ['claude'],
-      tags: Array.from(new Set([...(r.topics ?? []).slice(0, 5), 'skill'])),
-      downloads: r.stargazers_count,
-      installHook: { steps: [] },
-      metadata: { source: { repo: `${repoOwner}/${repoName}`, ref: 'main' } },
+      tags: ['skill'],
+      downloads: c.stars,
+      installHook: { steps: [{ type: 'file', url: c.rawUrl, dest: 'skill.md' }] },
+      metadata: { contentUrl: c.rawUrl, source: { repo: `${c.owner}/${c.repo}`, ref: c.branch, path: c.path } },
     })
   }
   return rows
