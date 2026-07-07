@@ -113,6 +113,36 @@ export class StoreClient {
     }
   }
 
+  /** Admin: lists all pending items awaiting review. Requires an admin session token. */
+  async getPendingItems(token: string): Promise<Result<Item[]>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/admin/pending`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json() as { items?: Item[]; error?: string }
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
+      return { data: json.items ?? [], error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** Admin: approve or reject a pending item. Requires an admin session token. */
+  async reviewItem(id: string, action: 'approve' | 'reject', token: string): Promise<Result<{ ok: true }>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/admin/items/${encodeURIComponent(id)}/review`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      const json = await res.json() as { ok?: true; error?: string }
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
+      return { data: { ok: true }, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
   /** Publishes a new item for the authenticated publisher (enters as pending). */
   async createItem(body: CreateItemBody, options: { token?: string } = {}): Promise<Result<{ success: true }>> {
     try {

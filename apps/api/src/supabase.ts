@@ -9,6 +9,7 @@ export type SupabaseEnv = {
   SUPABASE_SERVICE_ROLE_KEY?: string
   NEXT_PUBLIC_SUPABASE_URL?: string
   NEXT_PUBLIC_SUPABASE_ANON_KEY?: string
+  ADMIN_GITHUB_USERNAMES?: string
 }
 
 function pickEnv(env: SupabaseEnv | undefined, k: keyof SupabaseEnv): string | undefined {

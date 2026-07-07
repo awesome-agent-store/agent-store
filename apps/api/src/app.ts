@@ -7,6 +7,7 @@ import { getWaffoClient, proProductId, checkoutSuccessUrl, type WaffoEnv, type B
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
 import { getMyItems, createItem, validateCreateItem, type CreateItemInput } from './publisher-items'
+import { isAdmin, getPendingItems, setItemStatus } from './admin'
 import {
   isWebhookProcessed,
   markWebhookProcessed,
@@ -70,6 +71,26 @@ app.get('/api/me/items', async (c) => {
   const { data, error } = await getMyItems(c.env, user.username)
   if (error) return c.json({ error: 'Failed to fetch items' }, 500)
   return c.json({ items: data })
+})
+
+// Admin: list all pending items for review (crawler-sourced or user-submitted).
+app.get('/api/admin/pending', async (c) => {
+  const user = await getAuthUser(c.env, c.req.header('Authorization'))
+  if (!isAdmin(user, c.env)) return c.json({ error: 'Forbidden' }, 403)
+  const { data, error } = await getPendingItems(c.env)
+  if (error) return c.json({ error: 'Failed to fetch pending items' }, 500)
+  return c.json({ items: data })
+})
+
+// Admin: approve (→ published) or reject (→ rejected) a pending item.
+app.post('/api/admin/items/:id/review', async (c) => {
+  const user = await getAuthUser(c.env, c.req.header('Authorization'))
+  if (!isAdmin(user, c.env)) return c.json({ error: 'Forbidden' }, 403)
+  const body = (await c.req.json().catch(() => ({}))) as { action?: string }
+  if (body.action !== 'approve' && body.action !== 'reject') return c.json({ error: 'Invalid action' }, 422)
+  const { error } = await setItemStatus(c.env, c.req.param('id'), body.action === 'approve' ? 'published' : 'rejected')
+  if (error) return c.json({ error: 'Failed to update item' }, 500)
+  return c.json({ ok: true })
 })
 
 // Publish a new item for the authenticated publisher (enters as pending).
