@@ -1,0 +1,74 @@
+name: Release desktop app
+
+# Build the Tauri desktop app for macOS (Apple Silicon + Intel) and Windows,
+# then publish the installers to a GitHub Release. Triggered by pushing a
+# version tag (e.g. `v0.1.0`), or manually via the Actions tab.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: macos-latest # Apple Silicon (aarch64)
+          - host: macos-13 # Intel (x86_64)
+          - host: windows-latest # x86_64
+
+    runs-on: ${{ matrix.host }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/cli-gui/src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      # Compile the `as` CLI into the sidecar binary Tauri bundles (binaries/as-<triple>).
+      - name: Build sidecar
+        shell: bash
+        run: pnpm --filter @as/cli-gui build:sidecar
+
+      # Build the web frontend into apps/cli-gui/dist (frontendDist in tauri.conf.json).
+      - name: Build frontend
+        run: pnpm --filter @as/cli-gui build
+
+      - name: Build and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/cli-gui
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Agent Store CLI ${{ github.ref_name }}'
+          releaseBody: |
+            桌面客户端安装包。
+
+            - macOS: `.dmg`（Apple Silicon 与 Intel 各一份）
+            - Windows: `.msi` / `.exe`
+
+            当前为未签名构建，首次打开会有 Gatekeeper / SmartScreen 安全提示：
+            - macOS: 右键 → 打开，或在「系统设置 › 隐私与安全性」中允许
+            - Windows: 「更多信息」→「仍要运行」
+          releaseDraft: false
+          prerelease: false

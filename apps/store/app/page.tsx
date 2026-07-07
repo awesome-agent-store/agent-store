@@ -3,10 +3,12 @@ import { getFeaturedItems } from '@/lib/catalog'
 import { CATEGORY_META, CategoryGlyph } from '@/lib/item-meta'
 
 const RELEASES_URL = 'https://github.com/phenix3443/agent-store/releases'
-// Desktop installers are served from Cloudflare R2 (a private repo can't serve public
-// GitHub Release downloads). Set these on Vercel once the R2 bucket/domain exists.
-const DOWNLOAD_MAC_URL = process.env.NEXT_PUBLIC_DOWNLOAD_MAC_URL ?? '#'
-const DOWNLOAD_WIN_URL = process.env.NEXT_PUBLIC_DOWNLOAD_WIN_URL ?? '#'
+// The repo is public, so GitHub Releases serve the installers for free (built by
+// .github/workflows/release.yml on tag push). Until direct asset URLs are wired,
+// the buttons fall back to the latest release page. Optionally override with a CDN
+// URL (e.g. Cloudflare R2) via these env vars on Vercel.
+const DOWNLOAD_MAC_URL = process.env.NEXT_PUBLIC_DOWNLOAD_MAC_URL ?? `${RELEASES_URL}/latest`
+const DOWNLOAD_WIN_URL = process.env.NEXT_PUBLIC_DOWNLOAD_WIN_URL ?? `${RELEASES_URL}/latest`
 
 function Feature({
   color,
