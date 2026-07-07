@@ -47,8 +47,6 @@ interface CrawledItem {
   slug: string
   name: string
   description: string
-  readmeUrl: string
-  icon: string
   category: 'provider' | 'skill' | 'mcp'
   version: string
   publisherSlug: string
@@ -196,8 +194,6 @@ async function crawlMcp(publishers: Map<string, CrawledPublisher>, taken: Set<st
       slug,
       name: s.name,
       description: s.short_description || s.EXPERIMENTAL_ai_generated_description || s.name,
-      readmeUrl: s.source_code_url || s.external_url || s.url,
-      icon: owner ? `https://github.com/${owner}.png` : `https://api.dicebear.com/9.x/icons/svg?seed=${slug}`,
       category: 'mcp',
       version: '1.0.0',
       publisherSlug: pubSlug,
@@ -239,14 +235,11 @@ async function crawlProviders(publishers: Map<string, CrawledPublisher>, taken: 
       })
     }
     const slug = uniqueSlug(sanitizeSlug(`${p.slug}-provider`), taken)
-    const readmeUrl = p.status_page_url || p.terms_of_service_url || p.privacy_policy_url || 'https://openrouter.ai/'
     const hq = p.headquarters ? `（总部 ${p.headquarters}）` : ''
     rows.push({
       slug,
       name: p.name,
       description: `${p.name}：OpenRouter 上的真实推理服务供应商${hq}。`,
-      readmeUrl,
-      icon: `https://api.dicebear.com/9.x/icons/svg?seed=${slug}`,
       category: 'provider',
       version: '1.0.0',
       publisherSlug: pubSlug,
@@ -321,8 +314,6 @@ async function crawlSkills(publishers: Map<string, CrawledPublisher>, taken: Set
       slug,
       name: r.name,
       description: r.description || r.name,
-      readmeUrl: r.html_url,
-      icon: r.owner.avatar_url,
       category: 'skill',
       version: '1.0.0',
       publisherSlug: pubSlug,
@@ -358,12 +349,12 @@ function publisherInsert(pubs: CrawledPublisher[]): string {
 
 function itemInsert(it: CrawledItem): string {
   return `INSERT INTO items (
-  slug, name, description, readme_url, icon,
+  slug, name, description,
   category, version, publisher_id,
   compatible_with, tags, downloads, rating, status,
   install_hook, metadata
 ) VALUES (
-  ${sqlText(it.slug)}, ${sqlText(it.name)}, ${sqlText(it.description)}, ${sqlText(it.readmeUrl)}, ${sqlText(it.icon)},
+  ${sqlText(it.slug)}, ${sqlText(it.name)}, ${sqlText(it.description)},
   ${sqlText(it.category)}, ${sqlText(it.version)}, (SELECT id FROM publishers WHERE slug = ${sqlText(it.publisherSlug)}),
   ${sqlArray(it.compatibleWith)}, ${sqlArray(it.tags)}, ${it.downloads}, 0, 'published',
   ${sqlJson(it.installHook)}, ${sqlJson(it.metadata)}
@@ -383,7 +374,7 @@ const TEST_PROVIDERS_SQL = `-- Provider: local (built-in relay) — the endpoint
 -- to upstream providers by level. No upstream API key. Rendered specially in the
 -- CLI client (LOCAL_PROVIDER_SENTINEL __local__); this catalog row is its store listing.
 INSERT INTO items (
-  slug, name, description, readme_url, icon,
+  slug, name, description,
   category, version, publisher_id,
   compatible_with, tags, downloads, rating, status,
   install_hook, metadata
@@ -391,8 +382,6 @@ INSERT INTO items (
   'local',
   '本地中转',
   '内置本地中转：将 Claude Code / Codex 的 baseURL 指向本机监听端口，请求按 Level 优先级转发到已配置的上游供应商，失败自动降级。无需 API 密钥。',
-  'https://github.com/phenix3443/agent-store',
-  'https://api.dicebear.com/9.x/icons/svg?seed=local-relay',
   'provider', '1.0.0',
   (SELECT id FROM publishers WHERE slug = 'agent-store'),
   ARRAY['claude','codex'], ARRAY['relay','local','内置','test'], 0, 5.0, 'published',
@@ -403,7 +392,7 @@ INSERT INTO items (
 -- Provider: yls (伊莉思 Code) — real China relay for Codex CLI. Pre-fills the codex
 -- endpoint connection on install; user supplies the Bearer API key.
 INSERT INTO items (
-  slug, name, description, readme_url, icon,
+  slug, name, description,
   category, version, publisher_id,
   compatible_with, tags, downloads, rating, status,
   install_hook, metadata
@@ -411,8 +400,6 @@ INSERT INTO items (
   'yls',
   'YLS Code 中转',
   '伊莉思 Code 中转服务，国内直连免翻墙接入 Codex CLI（GPT-5 Code）与 Claude Code；此预设接入其 Codex 端点，按订阅计费。',
-  'https://docs.ylsagi.io/',
-  'https://api.dicebear.com/9.x/icons/svg?seed=yls-code',
   'provider', '1.0.0',
   (SELECT id FROM publishers WHERE slug = 'yls-me'),
   ARRAY['codex'], ARRAY['relay','codex','国产中转','test'], 32000, 4.7, 'published',
@@ -423,7 +410,7 @@ INSERT INTO items (
 -- Provider: skyapi — real China relay for Claude Code (Anthropic protocol). Pre-fills
 -- the claude endpoint connection on install; user supplies the x-api-key.
 INSERT INTO items (
-  slug, name, description, readme_url, icon,
+  slug, name, description,
   category, version, publisher_id,
   compatible_with, tags, downloads, rating, status,
   install_hook, metadata
@@ -431,8 +418,6 @@ INSERT INTO items (
   'skyapi',
   'SkyAPI 中转',
   'SkyAPI 中转服务，稳定线路免翻墙接入 Claude Code，兼容 Cursor / Cline / Windsurf 等客户端。',
-  'https://www.skyapi.org/docs/zh-CN/',
-  'https://api.dicebear.com/9.x/icons/svg?seed=skyapi',
   'provider', '1.0.0',
   (SELECT id FROM publishers WHERE slug = 'skyapi'),
   ARRAY['claude'], ARRAY['relay','claude','国产中转','test'], 21000, 4.5, 'published',
