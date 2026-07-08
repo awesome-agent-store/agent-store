@@ -121,22 +121,22 @@ test('provider add preserves existing non-provider settings', async () => {
   expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('sk-123')
 })
 
-test('skill add copies skill.md to claudeDir/skills/', async () => {
+test('skill add copies skill.md to claudeDir/skills/<name>/SKILL.md', async () => {
   const dir = join(aasHome, 'skills', 'test-skill')
   await mkdir(dir, { recursive: true })
   await writeFile(join(dir, 'skill.md'), '# Test Skill')
   await syncItemToClaude('test-skill', 'skill', aasHome, claudeDir, 'add')
-  const content = await readFile(join(claudeDir, 'skills', 'test-skill.md'), 'utf-8')
+  const content = await readFile(join(claudeDir, 'skills', 'test-skill', 'SKILL.md'), 'utf-8')
   expect(content).toBe('# Test Skill')
 })
 
-test('skill remove deletes skill file', async () => {
+test('skill remove deletes the skill directory', async () => {
   const dir = join(aasHome, 'skills', 'test-skill')
   await mkdir(dir, { recursive: true })
   await writeFile(join(dir, 'skill.md'), '# Test Skill')
   await syncItemToClaude('test-skill', 'skill', aasHome, claudeDir, 'add')
   await syncItemToClaude('test-skill', 'skill', aasHome, claudeDir, 'remove')
-  await expect(readFile(join(claudeDir, 'skills', 'test-skill.md'), 'utf-8')).rejects.toThrow()
+  await expect(readFile(join(claudeDir, 'skills', 'test-skill', 'SKILL.md'), 'utf-8')).rejects.toThrow()
 })
 
 test('skill remove does not throw if file absent', async () => {

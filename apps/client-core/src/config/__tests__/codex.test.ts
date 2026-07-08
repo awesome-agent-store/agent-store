@@ -96,12 +96,12 @@ test('provider remove deletes direct-apply codex settings', async () => {
   await expect(readFile(join(codexDir, 'auth.json'), 'utf-8')).rejects.toThrow()
 })
 
-test('skill add copies skill.md to codexDir/skills/', async () => {
+test('skill add copies skill.md to codexDir/skills/<name>/SKILL.md', async () => {
   const dir = join(aasHome, 'skills', 'test-skill')
   await mkdir(dir, { recursive: true })
   await writeFile(join(dir, 'skill.md'), '# Skill')
   await syncItemToCodex('test-skill', 'skill', aasHome, codexDir, 'add')
-  const content = await readFile(join(codexDir, 'skills', 'test-skill.md'), 'utf-8')
+  const content = await readFile(join(codexDir, 'skills', 'test-skill', 'SKILL.md'), 'utf-8')
   expect(content).toBe('# Skill')
 })
 

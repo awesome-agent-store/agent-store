@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, copyFile, unlink, rm } from 'fs/promises'
+import { readFile, writeFile, mkdir, copyFile, rm } from 'fs/promises'
 import { join } from 'path'
 import { parse, stringify } from '@iarna/toml'
 import type { JsonMap } from '@iarna/toml'
@@ -178,13 +178,13 @@ export async function syncItemToCodex(
       await removeCodexMcpServer(codexConfigDir, slug)
     }
   } else if (category === 'skill') {
-    const skillsDir = join(codexConfigDir, 'skills')
-    const destPath = join(skillsDir, `${slug}.md`)
+    // Codex discovers skills as directories: skills/<name>/SKILL.md
+    const skillDir = join(codexConfigDir, 'skills', slug)
     if (action === 'add') {
-      await mkdir(skillsDir, { recursive: true })
-      await copyFile(join(dir, 'skill.md'), destPath)
+      await mkdir(skillDir, { recursive: true })
+      await copyFile(join(dir, 'skill.md'), join(skillDir, 'SKILL.md'))
     } else {
-      try { await unlink(destPath) } catch { /* already absent */ }
+      try { await rm(skillDir, { recursive: true, force: true }) } catch { /* already absent */ }
     }
   } else if (category === 'provider') {
     if (action === 'add') {

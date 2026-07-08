@@ -428,7 +428,7 @@ test('enable/disable on a skill item is unaffected by the relay change', async (
   await writeFile(join(aasHome, 'skills', 'test-skill', 'skill.md'), '# Test Skill')
   await engine.enable('test-skill', 'claude')
 
-  const skillContent = await readFile(join(claudeDir, 'skills', 'test-skill.md'), 'utf-8')
+  const skillContent = await readFile(join(claudeDir, 'skills', 'test-skill', 'SKILL.md'), 'utf-8')
   expect(skillContent).toBe('# Test Skill')
   // Skills sync via file copy, not env vars — settings.json should be untouched by this enable call.
   const { access } = await import('fs/promises')
