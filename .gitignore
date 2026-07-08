@@ -36,3 +36,8 @@ apps/*/.wrangler/
 
 # local keys (never commit)
 keys/
+
+# e2e / test secrets: provider API keys, oauth tokens, private keys (never commit)
+test/provider/
+test/*.txt
+test/*.pem

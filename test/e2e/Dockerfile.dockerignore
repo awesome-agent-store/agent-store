@@ -1,0 +1,16 @@
+# Keep secrets, VCS, and heavy/generated dirs out of the build context.
+# Provider keys are mounted at runtime (-v test/provider:/secrets:ro), never baked in.
+**/node_modules
+.git
+test/provider
+keys
+**/.open-next
+**/.wrangler
+**/.next
+**/target
+**/.turbo
+bin
+**/*.log
+# NOTE: dist/ is intentionally NOT ignored — the workspace libs are built on the
+# host and copied in, because a cold tsc build inside this image cannot resolve
+# the @as/* workspace types reliably.

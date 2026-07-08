@@ -6,17 +6,19 @@ name: Deploy store to Cloudflare
 #   NEXT_PUBLIC_SUPABASE_ANON_KEY — the public anon key (inlined at build)
 # and the CLOUDFLARE_ACCOUNT_ID repo variable.
 on:
-  push:
+  # Gated on the e2e workflow: the store only deploys after e2e passes on main.
+  workflow_run:
+    workflows: [e2e]
+    types: [completed]
     branches: [main]
-    paths:
-      - 'apps/store/**'
-      - 'packages/**'
-      - 'pnpm-lock.yaml'
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Deploy only when the gating e2e run succeeded (manual dispatch has no
+    # workflow_run context, so allow that path through too).
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

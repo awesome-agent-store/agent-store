@@ -60,6 +60,17 @@ build-cli:
 e2e: build-cli
 	@./scripts/local-e2e.sh
 
+## Build the real-agent e2e image (claude + codex CLIs, the `as` CLI, fixtures).
+## Builds the @as/* libs on the host first — their dist/ is copied into the image.
+e2e-docker-build:
+	pnpm --filter='@as/client-core...' run build
+	docker build -f test/e2e/Dockerfile -t agent-store-e2e .
+
+## Run the real-agent e2e: installs packages, then drives claude & codex against them.
+## Needs provider keys in test/provider/*.txt (mounted read-only, never baked into the image).
+e2e-docker: e2e-docker-build
+	docker run --rm -v "$(PWD)/test/provider:/secrets:ro" agent-store-e2e
+
 ## Stop Supabase local stack
 stop:
 	supabase stop

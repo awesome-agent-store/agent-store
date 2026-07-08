@@ -1,0 +1,52 @@
+name: e2e
+
+# Real-agent end-to-end tests. The GitHub runner is already an isolated VM, so
+# these run directly (no Docker): install packages through the `as` CLI, then
+# drive real Claude Code and Codex and assert they actually use the skill + MCP.
+# deploy-store is gated on this workflow succeeding (see deploy-store.yml).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Build the libs the CLI imports, in dependency order (a cold tsc build can
+      # race @as/types vs @as/sdk otherwise).
+      - run: pnpm --filter=@as/types run build
+      - run: pnpm --filter=@as/sdk run build
+      - run: pnpm --filter=@as/client-core run build
+
+      # The two agent CLIs under test + the fixture MCP server's deps.
+      - run: npm install -g @anthropic-ai/claude-code @openai/codex
+      - run: cd test/e2e/fixtures && npm install --no-audit --no-fund
+
+      # Provider creds — each a 3-line base-url / api-key / model config.
+      # The codex endpoint (code.ylsagi.com/codex) only serves OpenAI models, so
+      # E2E_PROVIDER_CODEX must specify a gpt-* model, not a claude model.
+      - name: Write provider configs
+        run: |
+          mkdir -p test/provider
+          printf '%s\n' "${{ secrets.E2E_PROVIDER_CLAUDE }}" > test/provider/claude.txt
+          printf '%s\n' "${{ secrets.E2E_PROVIDER_CODEX }}" > test/provider/codex.txt
+          test -s test/provider/claude.txt && test -s test/provider/codex.txt \
+            || { echo "::error::Set E2E_PROVIDER_CLAUDE and E2E_PROVIDER_CODEX secrets"; exit 1; }
+
+      - name: Run e2e (claude + codex × skill + mcp)
+        run: bun test/e2e/verify.ts
+        env:
+          REPO: ${{ github.workspace }}
+          SECRETS_DIR: ${{ github.workspace }}/test/provider
+          WORK: ${{ runner.temp }}/as-e2e

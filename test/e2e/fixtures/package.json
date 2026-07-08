@@ -1,0 +1,8 @@
+{
+  "name": "e2e-fixtures",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
