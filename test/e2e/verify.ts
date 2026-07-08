@@ -86,13 +86,15 @@ function record(name: string, ok: boolean, detail = '') {
   console.log(`${ok ? '✅' : '❌'} ${name}${detail ? ` — ${detail}` : ''}`)
 }
 
-// Real LLM calls are slightly nondeterministic; retry once before failing.
+// Real LLM calls are nondeterministic (a model may greet instead of acting, or
+// drop the exact token); retry a few times before failing.
+const MAX_ATTEMPTS = 3
 async function checkAgent(name: string, cmd: string[], env: Record<string, string>, token: string) {
   let last: RunOut = { code: -1, stdout: '', stderr: '' }
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     last = await run(cmd, env)
     if (last.stdout.includes(token)) {
-      record(name, true, attempt > 1 ? `(retry ${attempt})` : oneline(last).slice(0, 40))
+      record(name, true, attempt > 1 ? `(attempt ${attempt})` : oneline(last).slice(0, 40))
       return
     }
   }
@@ -104,18 +106,18 @@ async function main() {
   console.log(`[e2e] claude → ${providers.claude.baseUrl} (${providers.claude.model})`)
   console.log(`[e2e] codex  → ${providers.codex.baseUrl} (${providers.codex.model})`)
 
-  const claudeHome = join(WORK, 'claude')
-  const codexHome = join(WORK, 'codex')
+  // Each package gets its OWN config dirs so a check has exactly one valid
+  // mechanism — otherwise codex tends to satisfy the skill prompt by calling the
+  // MCP tool (both installed → cross-contamination).
+  const d = {
+    claudeSkill: join(WORK, 'claude-skill'),
+    claudeMcp: join(WORK, 'claude-mcp'),
+    codexSkill: join(WORK, 'codex-skill'),
+    codexMcp: join(WORK, 'codex-mcp'),
+  }
   const aasHome = join(WORK, 'agents')
   await mkdir(WORK, { recursive: true })
-
-  // Config-dir env for the `as` CLI (it reads CLAUDE_CONFIG_DIR / CODEX_CONFIG_DIR / AS_HOME).
-  const installEnv = {
-    AS_STORE_URL: `http://127.0.0.1:${FIXTURE_PORT}`,
-    AS_HOME: aasHome,
-    CLAUDE_CONFIG_DIR: claudeHome,
-    CODEX_CONFIG_DIR: codexHome,
-  }
+  const baseInstall = { AS_STORE_URL: `http://127.0.0.1:${FIXTURE_PORT}`, AS_HOME: aasHome }
 
   // Start the fixture store.
   const server = spawn(['bun', join(HERE, 'fixture-server.ts')], {
@@ -126,15 +128,22 @@ async function main() {
   await waitPort(FIXTURE_PORT)
 
   try {
-    // Install through the real CLI — auto-enables for claude AND codex.
-    for (const slug of ['e2e-probe-skill', 'e2e-probe-mcp']) {
-      const r = await run(['bun', CLI, 'install', slug], installEnv, 60_000)
+    // Install each package into its own claude + codex config dirs (auto-enables both).
+    const installs = [
+      { slug: 'e2e-probe-skill', claude: d.claudeSkill, codex: d.codexSkill },
+      { slug: 'e2e-probe-mcp', claude: d.claudeMcp, codex: d.codexMcp },
+    ]
+    for (const it of installs) {
+      const r = await run(
+        ['bun', CLI, 'install', it.slug],
+        { ...baseInstall, CLAUDE_CONFIG_DIR: it.claude, CODEX_CONFIG_DIR: it.codex },
+        60_000
+      )
       const installed = /Installed/.test(r.stdout)
-      record(`install:${slug}`, installed, installed ? '' : (r.stdout + r.stderr).trim().slice(0, 200))
+      record(`install:${it.slug}`, installed, installed ? '' : (r.stdout + r.stderr).trim().slice(0, 200))
     }
 
-    // Codex needs a model provider pointing at its Responses endpoint. Merge-safe:
-    // written before nothing else touches it here except the CLI (already ran).
+    // Codex needs a model provider in each of its config dirs (merge-safe with any MCP entry).
     const codexToml =
       `model = "${providers.codex.model}"\n` +
       `model_provider = "e2e"\n\n` +
@@ -143,27 +152,25 @@ async function main() {
       `base_url = "${providers.codex.baseUrl}"\n` +
       `env_key = "CODEX_API_KEY"\n` +
       `wire_api = "responses"\n`
-    const existing = await readFile(join(codexHome, 'config.toml'), 'utf-8').catch(() => '')
-    await writeFile(join(codexHome, 'config.toml'), codexToml + '\n' + existing)
+    for (const home of [d.codexSkill, d.codexMcp]) {
+      const existing = await readFile(join(home, 'config.toml'), 'utf-8').catch(() => '')
+      await writeFile(join(home, 'config.toml'), codexToml + '\n' + existing)
+    }
 
     // ---- Claude Code ----
-    const claudeEnv = {
-      CLAUDE_CONFIG_DIR: claudeHome,
-      ANTHROPIC_BASE_URL: providers.claude.baseUrl,
-      ANTHROPIC_AUTH_TOKEN: providers.claude.apiKey,
-    }
+    const claudeBase = { ANTHROPIC_BASE_URL: providers.claude.baseUrl, ANTHROPIC_AUTH_TOKEN: providers.claude.apiKey }
     const claudeCmd = (prompt: string) =>
       ['claude', '--print', '--model', providers.claude.model, '--dangerously-skip-permissions', prompt]
-    await checkAgent('claude:skill', claudeCmd(SKILL_PROMPT), claudeEnv, SKILL_TOKEN)
-    await checkAgent('claude:mcp', claudeCmd(MCP_PROMPT), claudeEnv, MCP_TOKEN)
+    await checkAgent('claude:skill', claudeCmd(SKILL_PROMPT), { ...claudeBase, CLAUDE_CONFIG_DIR: d.claudeSkill }, SKILL_TOKEN)
+    await checkAgent('claude:mcp', claudeCmd(MCP_PROMPT), { ...claudeBase, CLAUDE_CONFIG_DIR: d.claudeMcp }, MCP_TOKEN)
 
     // ---- Codex ----
     // --dangerously-bypass-approvals-and-sandbox: exec is non-interactive, so
     // otherwise codex auto-cancels the MCP tool call and read-only blocks it.
-    const codexEnv = { CODEX_HOME: codexHome, CODEX_API_KEY: providers.codex.apiKey }
     const codexArgs = ['exec', '--skip-git-repo-check', '--dangerously-bypass-approvals-and-sandbox']
-    await checkAgent('codex:skill', ['codex', ...codexArgs, SKILL_PROMPT], codexEnv, SKILL_TOKEN)
-    await checkAgent('codex:mcp', ['codex', ...codexArgs, MCP_PROMPT], codexEnv, MCP_TOKEN)
+    const codexBase = { CODEX_API_KEY: providers.codex.apiKey }
+    await checkAgent('codex:skill', ['codex', ...codexArgs, SKILL_PROMPT], { ...codexBase, CODEX_HOME: d.codexSkill }, SKILL_TOKEN)
+    await checkAgent('codex:mcp', ['codex', ...codexArgs, MCP_PROMPT], { ...codexBase, CODEX_HOME: d.codexMcp }, MCP_TOKEN)
   } finally {
     server.kill()
   }
