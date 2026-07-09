@@ -15,14 +15,32 @@ export const LOCALE_NAMES: Record<Locale, string> = {
 
 const STORAGE_KEY = 'as-locale'
 
-function readStored(): Locale {
+function readStored(): Locale | null {
   try {
     const v = localStorage.getItem(STORAGE_KEY)
     if (v && (LOCALES as readonly string[]).includes(v)) return v as Locale
   } catch {
     /* localStorage unavailable */
   }
+  return null
+}
+
+/** Best-effort match of the OS/browser locale to a supported one; Chinese otherwise. */
+export function detectLocale(langs: readonly string[] = navigator.languages?.length ? navigator.languages : [navigator.language]): Locale {
+  try {
+    for (const lang of langs) {
+      const base = lang.toLowerCase().split('-')[0]
+      if ((LOCALES as readonly string[]).includes(base)) return base as Locale
+    }
+  } catch {
+    /* navigator unavailable */
+  }
   return 'zh'
+}
+
+/** Stored choice wins; first run falls back to the detected OS locale. */
+function initialLocale(): Locale {
+  return readStored() ?? detectLocale()
 }
 
 function resolve(dict: Record<string, unknown>, key: string): string | undefined {
@@ -40,7 +58,7 @@ interface I18nValue {
 const I18nContext = createContext<I18nValue | null>(null)
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(readStored)
+  const [locale, setLocaleState] = useState<Locale>(initialLocale)
 
   const setLocale = useCallback((l: Locale) => {
     try {

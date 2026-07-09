@@ -1,9 +1,12 @@
-import { test, expect, afterEach, spyOn, mock } from 'bun:test'
+import { test, expect, afterEach, beforeEach, spyOn, mock } from 'bun:test'
 import { render, screen, cleanup } from '@testing-library/react'
 import * as rpcModule from '../lib/rpc'
 import { App } from '../App'
 
-afterEach(() => { cleanup(); mock.restore() })
+// Pin the UI language so these assertions don't depend on the host's OS locale
+// (I18nProvider auto-detects the browser locale on first run).
+beforeEach(() => { try { localStorage.setItem('as-locale', 'zh') } catch { /* ignore */ } })
+afterEach(() => { cleanup(); mock.restore(); try { localStorage.clear() } catch { /* ignore */ } })
 
 function mockAllRpcs() {
   spyOn(rpcModule, 'callRpc').mockImplementation((async (method: string) => {
