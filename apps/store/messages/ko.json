@@ -1,0 +1,22 @@
+{
+  "store": {
+    "nav": {
+      "store": "스토어",
+      "docs": "문서",
+      "pricing": "가격",
+      "publish": "게시",
+      "login": "로그인",
+      "myHome": "내 프로필",
+      "settings": "설정",
+      "theme": "테마",
+      "language": "언어",
+      "logout": "로그아웃"
+    },
+    "categories": { "all": "전체", "provider": "제공자", "skill": "스킬", "mcp": "MCP" },
+    "sort": { "all": "전체", "new": "최신", "popular": "인기", "rating": "평점순" },
+    "search": { "placeholder": "리소스, 태그 또는 설명 검색…" },
+    "filters": { "verifiedOnly": "인증됨만" },
+    "card": { "install": "설치", "installed": "설치됨" },
+    "lang": { "zh": "中文", "en": "English", "ja": "日本語", "ko": "한국어", "es": "Español" }
+  }
+}

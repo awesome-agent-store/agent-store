@@ -1,0 +1,22 @@
+{
+  "store": {
+    "nav": {
+      "store": "ストア",
+      "docs": "ドキュメント",
+      "pricing": "料金",
+      "publish": "公開",
+      "login": "ログイン",
+      "myHome": "マイページ",
+      "settings": "設定",
+      "theme": "テーマ",
+      "language": "言語",
+      "logout": "ログアウト"
+    },
+    "categories": { "all": "すべて", "provider": "プロバイダー", "skill": "スキル", "mcp": "MCP" },
+    "sort": { "all": "すべて", "new": "新着", "popular": "人気", "rating": "高評価" },
+    "search": { "placeholder": "リソース、タグ、説明を検索…" },
+    "filters": { "verifiedOnly": "認証済みのみ" },
+    "card": { "install": "インストール", "installed": "インストール済み" },
+    "lang": { "zh": "中文", "en": "English", "ja": "日本語", "ko": "한국어", "es": "Español" }
+  }
+}

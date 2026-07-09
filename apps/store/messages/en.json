@@ -17,6 +17,6 @@
     "search": { "placeholder": "Search items, tags, or descriptions…" },
     "filters": { "verifiedOnly": "Verified only" },
     "card": { "install": "Install", "installed": "Installed" },
-    "lang": { "zh": "中文", "en": "English" }
+    "lang": { "zh": "中文", "en": "English", "ja": "日本語", "ko": "한국어", "es": "Español" }
   }
 }

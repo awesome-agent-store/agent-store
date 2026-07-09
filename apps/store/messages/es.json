@@ -1,0 +1,22 @@
+{
+  "store": {
+    "nav": {
+      "store": "Tienda",
+      "docs": "Documentación",
+      "pricing": "Precios",
+      "publish": "Publicar",
+      "login": "Iniciar sesión",
+      "myHome": "Mi perfil",
+      "settings": "Ajustes",
+      "theme": "Tema",
+      "language": "Idioma",
+      "logout": "Cerrar sesión"
+    },
+    "categories": { "all": "Todos", "provider": "Proveedores", "skill": "Habilidades", "mcp": "MCP" },
+    "sort": { "all": "Todos", "new": "Más recientes", "popular": "Populares", "rating": "Mejor valorados" },
+    "search": { "placeholder": "Buscar recursos, etiquetas o descripciones…" },
+    "filters": { "verifiedOnly": "Solo verificados" },
+    "card": { "install": "Instalar", "installed": "Instalado" },
+    "lang": { "zh": "中文", "en": "English", "ja": "日本語", "ko": "한국어", "es": "Español" }
+  }
+}

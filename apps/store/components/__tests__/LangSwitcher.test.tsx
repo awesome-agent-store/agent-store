@@ -9,7 +9,8 @@ mock.module('next/navigation', () => ({
 }))
 mock.module('next-intl', () => ({
   useLocale: () => 'zh',
-  useTranslations: () => (key: string) => ({ zh: '中文', en: 'English' }[key.split('.').pop() ?? '']),
+  useTranslations: () => (key: string) =>
+    ({ zh: '中文', en: 'English', ja: '日本語', ko: '한국어', es: 'Español' })[key.split('.').pop() ?? ''],
 }))
 
 beforeEach(() => { document.cookie = 'locale=zh' })
