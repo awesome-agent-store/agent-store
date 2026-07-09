@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { StoreClient } from '@as/sdk'
+import { PRICING, formatPrice } from '@as/types'
 import { createClient } from '@/lib/supabase/client'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
@@ -25,13 +26,14 @@ export default function PricingPage() {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function upgrade(plan: 'monthly' | 'yearly' | 'lifetime') {
+  async function upgrade(plan: 'monthly' | 'yearly' | 'lifetime', trial = false) {
+    const key = trial ? `${plan}-trial` : plan
     if (busy) return
-    setBusy(plan)
+    setBusy(key)
     setError(null)
     try {
       const { data: { session } } = await createClient().auth.getSession()
-      const result = await new StoreClient(API_URL).createCheckout({ period: plan }, { token: session?.access_token })
+      const result = await new StoreClient(API_URL).createCheckout({ period: plan, trial }, { token: session?.access_token })
       if (result.data?.checkoutUrl) window.open(result.data.checkoutUrl, '_blank', 'noopener,noreferrer')
       else setError(result.error ?? '发起支付失败')
     } catch {
@@ -76,20 +78,31 @@ export default function PricingPage() {
         </Card>
 
         {/* Pro */}
-        <Card title="Pro" price={period === 'monthly' ? '$9.99' : '$99'} sub={period === 'monthly' ? '/ 月' : '/ 年'} highlighted>
+        <Card title="Pro" price={formatPrice(period)} sub={period === 'monthly' ? '/ 月' : '/ 年'} highlighted>
           <FeatureList items={PRO_FEATURES} />
+          <button
+            type="button"
+            onClick={() => upgrade(period, true)}
+            disabled={busy != null}
+            className="mt-6 w-full rounded-lg bg-store-accent px-4 py-2.5 text-center text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {busy === `${period}-trial` ? '发起中…' : `开始 ${PRICING.trialDays} 天免费试用`}
+          </button>
           <button
             type="button"
             onClick={() => upgrade(period)}
             disabled={busy != null}
-            className="mt-6 w-full rounded-lg bg-store-accent px-4 py-2.5 text-center text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            className="mt-2 w-full rounded-lg border border-store-border-strong px-4 py-2 text-center text-sm font-medium text-store-text-2 hover:border-store-accent disabled:opacity-50"
           >
-            {busy === period ? '发起中…' : '升级 Pro'}
+            {busy === period ? '发起中…' : '直接升级 Pro'}
           </button>
+          <p className="mt-2 text-center text-[11px] text-store-text-3">
+            {PRICING.trialDays} 天免费，之后 {formatPrice(period)}{period === 'monthly' ? ' / 月' : ' / 年'}，随时取消
+          </p>
         </Card>
 
         {/* Lifetime */}
-        <Card title="终身买断" price="$199" sub="一次性">
+        <Card title="终身买断" price={formatPrice('lifetime')} sub="一次性">
           <FeatureList items={LIFETIME_FEATURES} />
           <button
             type="button"

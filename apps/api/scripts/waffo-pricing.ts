@@ -10,6 +10,7 @@
  */
 import { readFileSync } from 'fs'
 import { WaffoPancake } from '@waffo/pancake-ts'
+import { PRICING, formatPrice } from '@as/types'
 
 const env = (k: string) => {
   const v = process.env[k]
@@ -23,16 +24,18 @@ const client = new WaffoPancake({
 
 await client.subscriptionProducts.update({
   id: env('WAFFO_MONTHLY_ID'),
-  prices: { USD: { amount: '9.99', taxIncluded: true, taxCategory: 'saas' } },
+  prices: { USD: { amount: PRICING.monthly.amount, taxIncluded: true, taxCategory: PRICING.monthly.taxCategory } },
+  metadata: { trialDays: PRICING.trialDays },
 })
 await client.subscriptionProducts.update({
   id: env('WAFFO_YEARLY_ID'),
-  prices: { USD: { amount: '99.00', taxIncluded: true, taxCategory: 'saas' } },
+  prices: { USD: { amount: PRICING.yearly.amount, taxIncluded: true, taxCategory: PRICING.yearly.taxCategory } },
+  metadata: { trialDays: PRICING.trialDays },
 })
 await client.onetimeProducts.update({
   id: env('WAFFO_LIFETIME_ID'),
-  prices: { USD: { amount: '199.00', taxIncluded: true, taxCategory: 'software' } },
+  prices: { USD: { amount: PRICING.lifetime.amount, taxIncluded: true, taxCategory: PRICING.lifetime.taxCategory } },
 })
 
 console.log('---RESULT---')
-console.log('monthly -> $9.99, yearly -> $99.00, lifetime -> $199.00')
+console.log(`monthly -> ${formatPrice('monthly')}, yearly -> ${formatPrice('yearly')}, lifetime -> ${formatPrice('lifetime')} (trial ${PRICING.trialDays}d)`)

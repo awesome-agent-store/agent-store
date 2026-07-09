@@ -3,7 +3,7 @@ import { cors } from 'hono/cors'
 import { verifyWebhook, type WebhookEvent, type WebhookEventData } from '@waffo/pancake-ts'
 import { getItems, getItemBySlug, getPublisherBySlug, getPublisherItems } from './queries'
 import { getSupabaseAdmin, type SupabaseEnv } from './supabase'
-import { getWaffoClient, proProductId, checkoutSuccessUrl, type WaffoEnv, type BillingPlan } from './waffo'
+import { getWaffoClient, proProductId, checkoutSuccessUrl, wantsTrial, type WaffoEnv, type BillingPlan } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
 import { getMyItems } from './publisher-items'
@@ -165,9 +165,11 @@ app.post('/api/billing/checkout', async (c) => {
     period?: BillingPlan
     email?: string
     successUrl?: string
+    trial?: boolean
   }
   const period: BillingPlan =
     body.period === 'yearly' ? 'yearly' : body.period === 'lifetime' ? 'lifetime' : 'monthly'
+  const withTrial = wantsTrial(period, body.trial)
   const productId = proProductId(c.env, period)
   if (!productId) return c.json({ error: 'Billing not configured' }, 501)
 
@@ -194,6 +196,8 @@ app.post('/api/billing/checkout', async (c) => {
       successUrl: body.successUrl ?? checkoutSuccessUrl(c.env),
       // Echoed back on webhooks (event.data.orderMetadata) to bind the subscription.
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+      // Start on the free trial for subscription checkouts that requested it.
+      ...(withTrial ? { withTrial: true } : {}),
     })
     return c.json({ checkoutUrl: session.checkoutUrl, sessionId: session.sessionId })
   } catch {

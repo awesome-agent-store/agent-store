@@ -45,3 +45,8 @@ export function proProductId(env: WaffoEnv | undefined, plan: BillingPlan): stri
 export function checkoutSuccessUrl(env?: WaffoEnv): string | undefined {
   return pickEnv(env, 'WAFFO_CHECKOUT_SUCCESS_URL')
 }
+
+/** Whether a checkout should start on the free trial: only requested subscriptions, never lifetime. */
+export function wantsTrial(plan: BillingPlan, trial: boolean | undefined): boolean {
+  return trial === true && plan !== 'lifetime'
+}

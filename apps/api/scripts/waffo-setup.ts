@@ -7,6 +7,7 @@
  */
 import { readFileSync } from 'fs'
 import { WaffoPancake } from '@waffo/pancake-ts'
+import { PRICING } from '@as/types'
 
 const merchantId = process.env['WAFFO_MERCHANT_ID']
 const keyPath = process.env['WAFFO_PRIVATE_KEY_PATH']
@@ -27,11 +28,13 @@ console.log('using store:', store.id, store.name)
 
 const monthly = await client.subscriptionProducts.create({
   storeId: store.id, name: 'Pro Monthly', billingPeriod: 'monthly' as never,
-  prices: { USD: { amount: '9.99', taxIncluded: true, taxCategory: 'saas' } },
+  prices: { USD: { amount: PRICING.monthly.amount, taxIncluded: true, taxCategory: PRICING.monthly.taxCategory } },
+  metadata: { trialDays: PRICING.trialDays },
 })
 const yearly = await client.subscriptionProducts.create({
   storeId: store.id, name: 'Pro Yearly', billingPeriod: 'yearly' as never,
-  prices: { USD: { amount: '99.00', taxIncluded: true, taxCategory: 'saas' } },
+  prices: { USD: { amount: PRICING.yearly.amount, taxIncluded: true, taxCategory: PRICING.yearly.taxCategory } },
+  metadata: { trialDays: PRICING.trialDays },
 })
 
 await client.webhooks.add({
