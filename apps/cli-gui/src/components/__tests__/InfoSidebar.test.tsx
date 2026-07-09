@@ -39,19 +39,18 @@ test('分类 section prepends the category type label as the first chip before t
   expect(screen.getByText('io')).toBeInTheDocument()
 })
 
-test('资源 section renders the mockup decorative row list for mcp items', () => {
+test('资源 section links to the real Store page for an mcp item', () => {
   render(<InfoSidebar detail={installedDetail()} />)
   expect(screen.getByText('资源')).toBeInTheDocument()
-  expect(screen.getByText('官网 / 文档')).toBeInTheDocument()
-  expect(screen.getByText('源码仓库 (GitHub)')).toBeInTheDocument()
   expect(screen.getByText('Store 页面')).toBeInTheDocument()
+  expect(screen.queryByText('官网 / 文档')).not.toBeInTheDocument()
+  expect(screen.queryByText('源码仓库 (GitHub)')).not.toBeInTheDocument()
 })
 
-test('资源 section renders only the provider-specific rows for a provider item', () => {
+test('资源 section links to the real Store page for a provider item', () => {
   render(<InfoSidebar detail={installedDetail({ category: 'provider' })} />)
-  expect(screen.getByText('官网 / 文档')).toBeInTheDocument()
   expect(screen.getByText('Store 页面')).toBeInTheDocument()
-  expect(screen.queryByText('源码仓库 (GitHub)')).not.toBeInTheDocument()
+  expect(screen.queryByText('官网 / 文档')).not.toBeInTheDocument()
 })
 
 test('shows the 市场 section for a not-yet-installed catalog item too', () => {

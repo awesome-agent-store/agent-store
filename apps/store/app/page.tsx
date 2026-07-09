@@ -3,6 +3,7 @@ import { getFeaturedItems } from '@/lib/catalog'
 import { CATEGORY_META, CategoryGlyph } from '@/lib/item-meta'
 
 const RELEASES_URL = 'https://github.com/phenix3443/agent-store/releases'
+const ORG_URL = 'https://github.com/ai-agent-store'
 // Installers are built by .github/workflows/release.yml and published to GitHub
 // Releases. The /download/[target] route resolves each button to the newest
 // matching asset, so links always track the latest release.
@@ -264,19 +265,18 @@ export default async function LandingPage() {
               <div className="text-xs font-bold text-[#8a8a98]">产品</div>
               <Link href="/store" className="text-[13px] text-[#a9a9bd] hover:text-white">商店</Link>
               <Link href="/docs" className="text-[13px] text-[#a9a9bd] hover:text-white">文档</Link>
-              <span className="cursor-pointer text-[13px] text-[#a9a9bd] hover:text-white">定价</span>
+              <Link href="/pricing" className="text-[13px] text-[#a9a9bd] hover:text-white">定价</Link>
             </div>
             <div className="flex flex-col gap-2.5">
               <div className="text-xs font-bold text-[#8a8a98]">资源</div>
               <Link href="/docs" className="text-[13px] text-[#a9a9bd] hover:text-white">开始使用</Link>
               <a href={RELEASES_URL} className="text-[13px] text-[#a9a9bd] hover:text-white">GitHub</a>
-              <span className="cursor-pointer text-[13px] text-[#a9a9bd] hover:text-white">更新日志</span>
+              <a href={RELEASES_URL} className="text-[13px] text-[#a9a9bd] hover:text-white">更新日志</a>
             </div>
             <div className="flex flex-col gap-2.5">
               <div className="text-xs font-bold text-[#8a8a98]">公司</div>
-              <span className="cursor-pointer text-[13px] text-[#a9a9bd] hover:text-white">关于</span>
-              <span className="cursor-pointer text-[13px] text-[#a9a9bd] hover:text-white">博客</span>
-              <span className="cursor-pointer text-[13px] text-[#a9a9bd] hover:text-white">联系</span>
+              <a href={ORG_URL} className="text-[13px] text-[#a9a9bd] hover:text-white">关于</a>
+              <a href={`${ORG_URL}/registry/issues`} className="text-[13px] text-[#a9a9bd] hover:text-white">联系</a>
             </div>
           </div>
         </div>

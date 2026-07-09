@@ -1,6 +1,18 @@
 import { ExternalLink } from 'lucide-react'
 import type { SelectedDetail } from '../lib/useSelectedDetail'
 import { TYPE_META } from '../lib/detailContent'
+import { openExternal } from '../lib/openExternal'
+
+const STORE_BASE = 'https://agent-store.panghuli.tech'
+
+/** Real, openable links for a resource — only ones we actually have a URL for. */
+function resourceLinks(detail: SelectedDetail): { label: string; url: string }[] {
+  const links = [{ label: 'Store 页面', url: `${STORE_BASE}/store/${detail.category}/${detail.slug}` }]
+  if (detail.category === 'skill' && 'contentUrl' in detail && detail.contentUrl) {
+    links.push({ label: '源码 (SKILL.md)', url: detail.contentUrl })
+  }
+  return links
+}
 
 function Row({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
@@ -25,12 +37,6 @@ function Pill({ children }: { children: string }) {
       {children}
     </span>
   )
-}
-
-const RESOURCE_ROWS: Record<'provider' | 'skill' | 'mcp', string[]> = {
-  provider: ['官网 / 文档', 'Store 页面'],
-  skill: ['官网 / 文档', '源码仓库 (GitHub)', 'Store 页面'],
-  mcp: ['官网 / 文档', '源码仓库 (GitHub)', 'Store 页面'],
 }
 
 function formatDate(value?: string): string {
@@ -73,11 +79,16 @@ export function InfoSidebar({ detail }: { detail: SelectedDetail }) {
       <div>
         <SectionHeading>资源</SectionHeading>
         <div className="flex flex-col gap-2.5">
-          {RESOURCE_ROWS[detail.category].map((label) => (
-            <div key={label} className="flex cursor-pointer items-center gap-2 text-store-text-2 hover:text-store-accent">
+          {resourceLinks(detail).map(({ label, url }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => openExternal(url)}
+              className="flex items-center gap-2 text-store-text-2 hover:text-store-accent"
+            >
               <ExternalLink size={13} />
               <span className="text-xs font-medium">{label}</span>
-            </div>
+            </button>
           ))}
         </div>
       </div>

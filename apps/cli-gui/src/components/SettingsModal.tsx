@@ -41,6 +41,17 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [authBusy, setAuthBusy] = useState(false)
   const [langCode, setLangCode] = useState('zh')
   const [langMenuOpen, setLangMenuOpen] = useState(false)
+  const [updateMsg, setUpdateMsg] = useState<string | null>(null)
+
+  async function checkForUpdates() {
+    setUpdateMsg('检查中…')
+    try {
+      const updates = await callRpc<unknown[]>('checkUpdates')
+      setUpdateMsg(updates.length > 0 ? `有 ${updates.length} 个可更新` : '已是最新')
+    } catch {
+      setUpdateMsg('检查失败')
+    }
+  }
 
   const currentLang = LANGUAGES.find((l) => l.code === langCode) ?? LANGUAGES[0]
   const appMeta = APP_META[agentApp]
@@ -278,10 +289,29 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   </div>
                   <div className="text-[15px] font-bold text-store-text">Agent Store CLI</div>
                   <div className="font-mono text-xs text-store-text-3">v0.0.1 · registry client</div>
-                  <div className="mt-1.5 flex gap-4.5">
-                    <span className="cursor-pointer text-xs font-semibold text-store-accent">文档</span>
-                    <span className="cursor-pointer text-xs font-semibold text-store-accent">GitHub</span>
-                    <span className="cursor-pointer text-xs font-semibold text-store-accent">检查更新</span>
+                  <div className="mt-1.5 flex items-center gap-4.5">
+                    <button
+                      type="button"
+                      onClick={() => openExternal('https://agent-store.panghuli.tech/docs')}
+                      className="cursor-pointer text-xs font-semibold text-store-accent"
+                    >
+                      文档
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openExternal('https://github.com/ai-agent-store')}
+                      className="cursor-pointer text-xs font-semibold text-store-accent"
+                    >
+                      GitHub
+                    </button>
+                    <button
+                      type="button"
+                      onClick={checkForUpdates}
+                      className="cursor-pointer text-xs font-semibold text-store-accent"
+                    >
+                      检查更新
+                    </button>
+                    {updateMsg && <span className="text-xs text-store-text-3">{updateMsg}</span>}
                   </div>
                 </div>
               )}
