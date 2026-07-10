@@ -41,6 +41,9 @@ importers:
       hono:
         specifier: ^4.6.0
         version: 4.12.27
+      jose:
+        specifier: ^6.2.3
+        version: 6.2.3
     devDependencies:
       '@types/bun':
         specifier: latest
@@ -3821,6 +3824,9 @@ packages:
   jiti@1.21.7:
     resolution: {integrity: sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A==}
     hasBin: true
+
+  jose@6.2.3:
+    resolution: {integrity: sha512-YYVDInQKFJfR/xa3ojUTl8c2KoTwiL1R5Wg9YCydwH0x0B9grbzlg5HC7mMjCtUJjbQ/YnGEZIhI5tCgfTb4Hw==}
 
   js-tokens@3.0.0:
     resolution: {integrity: sha512-poXEQHPMmTrYZuJgNRll2sbc3kJsSU1m/g1Q93IE6txNj3p6xOOOmdj1G/zCVGawYSPzTkSoWGg1otqbeqKJeg==}
@@ -8828,6 +8834,8 @@ snapshots:
       '@isaacs/cliui': 9.0.0
 
   jiti@1.21.7: {}
+
+  jose@6.2.3: {}
 
   js-tokens@3.0.0: {}
 

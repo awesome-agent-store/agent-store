@@ -18,7 +18,8 @@
     "@supabase/supabase-js": "^2.108.2",
     "@waffo/pancake-ts": "^0.11.0",
     "drizzle-orm": "^0.44.5",
-    "hono": "^4.6.0"
+    "hono": "^4.6.0",
+    "jose": "^6.2.3"
   },
   "devDependencies": {
     "@types/bun": "latest",
