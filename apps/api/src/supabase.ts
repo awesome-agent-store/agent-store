@@ -19,6 +19,10 @@ function pickEnv(env: SupabaseEnv | undefined, k: keyof SupabaseEnv): string | u
  * Create a plain (cookie-less) Supabase client. `env` wins (Workers); otherwise
  * fall back to process.env (local Bun). Supports the NEXT_PUBLIC_* names so the
  * same .env used by the web app works locally.
+ *
+ * Data access has moved to Drizzle/Neon (see `db/`); this client is now only
+ * used by `auth.ts` to validate Supabase Auth session tokens, until Phase 2
+ * swaps auth to Neon Auth.
  */
 export function getSupabase(env?: SupabaseEnv): SupabaseClient {
   const url = pickEnv(env, 'SUPABASE_URL') ?? pickEnv(env, 'NEXT_PUBLIC_SUPABASE_URL')
@@ -29,18 +33,4 @@ export function getSupabase(env?: SupabaseEnv): SupabaseClient {
     )
   }
   return createClient(url, key)
-}
-
-/**
- * Server-trusted Supabase client using the service-role key. Used by the billing
- * webhook and entitlement handlers to read/write `subscriptions`, which RLS keeps
- * inaccessible to the anon key. Never expose this client to untrusted callers.
- */
-export function getSupabaseAdmin(env?: SupabaseEnv): SupabaseClient {
-  const url = pickEnv(env, 'SUPABASE_URL') ?? pickEnv(env, 'NEXT_PUBLIC_SUPABASE_URL')
-  const key = pickEnv(env, 'SUPABASE_SERVICE_ROLE_KEY')
-  if (!url || !key) {
-    throw new Error('Missing Supabase admin config: set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.')
-  }
-  return createClient(url, key, { auth: { persistSession: false } })
 }

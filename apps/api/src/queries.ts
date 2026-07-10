@@ -1,8 +1,8 @@
 import type { Item, Publisher } from '@as/types'
-import { getSupabase, type SupabaseEnv } from './supabase'
-import { mapItem, mapPublisher, type DBItem, type DBPublisher } from './db-types'
-
-const ITEM_SELECT = '*, publishers(*)'
+import { and, arrayContains, desc, eq, ilike, or, type SQL } from 'drizzle-orm'
+import { getDb, type DbEnv } from './db/client'
+import { items, publishers } from './db/schema'
+import { mapItem, mapPublisher } from './db-types'
 
 export interface GetItemsOptions {
   category?: 'provider' | 'skill' | 'mcp' | null
@@ -13,103 +13,98 @@ export interface GetItemsOptions {
 }
 
 // Each query takes the runtime env (Cloudflare Workers `c.env`, or undefined on
-// local Bun where it falls back to process.env) and creates a Supabase client.
+// local Bun where it falls back to process.env) and creates a Drizzle client.
 
 export async function getItems(
-  env: SupabaseEnv | undefined,
+  env: DbEnv | undefined,
   options: GetItemsOptions
 ): Promise<{ data: Item[]; error: string | null }> {
   const { category, q, limit = 20, offset = 0, sort = 'downloads' } = options
-  const supabase = getSupabase(env)
+  try {
+    const db = getDb(env)
+    const filters: SQL[] = [eq(items.status, 'published')]
+    if (category) filters.push(eq(items.category, category))
+    // Match name/description substring, or an exact tag — mirrors the web+CLI
+    // search that both consume this endpoint.
+    if (q) {
+      filters.push(
+        or(ilike(items.name, `%${q}%`), ilike(items.description, `%${q}%`), arrayContains(items.tags, [q]))!
+      )
+    }
 
-  let query = supabase.from('items').select(ITEM_SELECT).eq('status', 'published')
+    const rows = await db
+      .select()
+      .from(items)
+      .innerJoin(publishers, eq(items.publisherId, publishers.id))
+      .where(and(...filters))
+      .orderBy(desc(sort === 'created' ? items.createdAt : items.downloads))
+      .limit(limit)
+      .offset(offset)
 
-  if (category) query = query.eq('category', category)
-  // Match name/description substring, or an exact tag — mirrors the web+CLI
-  // search that both consume this endpoint.
-  if (q) query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%,tags.cs.{${q}}`)
-
-  const orderColumn = sort === 'created' ? 'created_at' : 'downloads'
-  query = query.order(orderColumn, { ascending: false })
-
-  const { data, error } = await query.range(offset, offset + limit - 1)
-
-  if (error) return { data: [], error: (error as { message?: string }).message ?? 'Query failed' }
-
-  const rows = (data ?? []) as Array<DBItem & { publishers: DBPublisher }>
-  return { data: rows.map(mapItem), error: null }
+    return { data: rows.map((r) => mapItem({ ...r.items, publisher: r.publishers })), error: null }
+  } catch (e) {
+    return { data: [], error: (e as Error).message ?? 'Query failed' }
+  }
 }
 
 export async function getItemBySlug(
-  env: SupabaseEnv | undefined,
+  env: DbEnv | undefined,
   slug: string
 ): Promise<{ data: Item | null; error: string | null }> {
-  const supabase = getSupabase(env)
+  try {
+    const db = getDb(env)
+    const rows = await db
+      .select()
+      .from(items)
+      .innerJoin(publishers, eq(items.publisherId, publishers.id))
+      .where(and(eq(items.slug, slug), eq(items.status, 'published')))
+      .limit(1)
 
-  const { data, error } = await supabase
-    .from('items')
-    .select(ITEM_SELECT)
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .limit(1)
-    .single()
-
-  if (error) {
-    const pgError = error as { code?: string; message?: string }
-    if (pgError.code === 'PGRST116') return { data: null, error: null }
-    return { data: null, error: pgError.message ?? 'Query failed' }
+    const row = rows[0]
+    if (!row) return { data: null, error: null }
+    return { data: mapItem({ ...row.items, publisher: row.publishers }), error: null }
+  } catch (e) {
+    return { data: null, error: (e as Error).message ?? 'Query failed' }
   }
-
-  if (!data) return { data: null, error: null }
-  return { data: mapItem(data as DBItem & { publishers: DBPublisher }), error: null }
 }
 
 export async function getPublisherBySlug(
-  env: SupabaseEnv | undefined,
+  env: DbEnv | undefined,
   slug: string
 ): Promise<{ data: Publisher | null; error: string | null }> {
-  const supabase = getSupabase(env)
-
-  const { data, error } = await supabase
-    .from('publishers')
-    .select('*')
-    .eq('slug', slug)
-    .limit(1)
-    .single()
-
-  if (error) {
-    const pgError = error as { code?: string; message?: string }
-    if (pgError.code === 'PGRST116') return { data: null, error: null }
-    return { data: null, error: pgError.message ?? 'Query failed' }
+  try {
+    const db = getDb(env)
+    const rows = await db.select().from(publishers).where(eq(publishers.slug, slug)).limit(1)
+    const row = rows[0]
+    if (!row) return { data: null, error: null }
+    return { data: mapPublisher(row), error: null }
+  } catch (e) {
+    return { data: null, error: (e as Error).message ?? 'Query failed' }
   }
-
-  return { data: mapPublisher(data as DBPublisher), error: null }
 }
 
 export async function getPublisherItems(
-  env: SupabaseEnv | undefined,
+  env: DbEnv | undefined,
   publisherSlug: string
 ): Promise<{ data: Item[]; error: string | null }> {
-  const supabase = getSupabase(env)
+  try {
+    const db = getDb(env)
+    const pub = await db
+      .select({ id: publishers.id })
+      .from(publishers)
+      .where(eq(publishers.slug, publisherSlug))
+      .limit(1)
+    if (!pub[0]) return { data: [], error: null }
 
-  const { data: publisherData, error: pubError } = await supabase
-    .from('publishers')
-    .select('id')
-    .eq('slug', publisherSlug)
-    .limit(1)
-    .single()
+    const rows = await db
+      .select()
+      .from(items)
+      .innerJoin(publishers, eq(items.publisherId, publishers.id))
+      .where(and(eq(items.publisherId, pub[0].id), eq(items.status, 'published')))
+      .orderBy(desc(items.downloads))
 
-  if (pubError || !publisherData) return { data: [], error: null }
-
-  const { data, error } = await supabase
-    .from('items')
-    .select(ITEM_SELECT)
-    .eq('publisher_id', (publisherData as { id: string }).id)
-    .eq('status', 'published')
-    .order('downloads', { ascending: false })
-
-  if (error) return { data: [], error: (error as { message?: string }).message ?? 'Query failed' }
-
-  const rows = (data ?? []) as Array<DBItem & { publishers: DBPublisher }>
-  return { data: rows.map(mapItem), error: null }
+    return { data: rows.map((r) => mapItem({ ...r.items, publisher: r.publishers })), error: null }
+  } catch (e) {
+    return { data: [], error: (e as Error).message ?? 'Query failed' }
+  }
 }

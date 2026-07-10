@@ -1,8 +1,11 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { desc, eq, sql } from 'drizzle-orm'
 import { verifyWebhook, type WebhookEvent, type WebhookEventData } from '@waffo/pancake-ts'
 import { getItems, getItemBySlug, getPublisherBySlug, getPublisherItems } from './queries'
-import { getSupabaseAdmin, type SupabaseEnv } from './supabase'
+import { getDb, type DbEnv } from './db/client'
+import { itemVersions, items, reviews } from './db/schema'
+import type { SupabaseEnv } from './supabase'
 import { getWaffoClient, proProductId, checkoutSuccessUrl, wantsTrial, type WaffoEnv, type BillingPlan } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
@@ -18,7 +21,7 @@ import {
 // On Cloudflare Workers, secrets arrive as the fetch handler's `env` (Hono c.env).
 // On local Bun (Bun.serve), c.env is the Bun server object with no such keys, so
 // getSupabase()/getWaffoClient() fall back to process.env.
-export const app = new Hono<{ Bindings: SupabaseEnv & WaffoEnv }>()
+export const app = new Hono<{ Bindings: SupabaseEnv & WaffoEnv & DbEnv }>()
 
 app.use('/api/*', cors())
 
@@ -52,10 +55,13 @@ app.get('/api/items/:slug', async (c) => {
 app.post('/api/items/:slug/install', async (c) => {
   const slug = c.req.param('slug')
   try {
-    const supabase = getSupabaseAdmin(c.env)
-    const { data } = await supabase.from('items').select('downloads').eq('slug', slug).single()
-    if (!data) return c.json({ error: 'Not found' }, 404)
-    await supabase.from('items').update({ downloads: (data.downloads ?? 0) + 1 }).eq('slug', slug)
+    const db = getDb(c.env)
+    const updated = await db
+      .update(items)
+      .set({ downloads: sql`${items.downloads} + 1` })
+      .where(eq(items.slug, slug))
+      .returning({ downloads: items.downloads })
+    if (updated.length === 0) return c.json({ error: 'Not found' }, 404)
     return c.json({ ok: true })
   } catch {
     return c.json({ error: 'Failed to record install' }, 500)
@@ -68,14 +74,19 @@ app.post('/api/items/:slug/install', async (c) => {
 app.get('/api/items/:slug/reviews', async (c) => {
   const slug = c.req.param('slug')
   try {
-    const supabase = getSupabaseAdmin(c.env)
-    const { data } = await supabase
-      .from('reviews')
-      .select('author_name, rating, body, updated_at')
-      .eq('item_slug', slug)
-      .order('updated_at', { ascending: false })
+    const db = getDb(c.env)
+    const data = await db
+      .select({
+        author_name: reviews.authorName,
+        rating: reviews.rating,
+        body: reviews.body,
+        updated_at: reviews.updatedAt,
+      })
+      .from(reviews)
+      .where(eq(reviews.itemSlug, slug))
+      .orderBy(desc(reviews.updatedAt))
       .limit(50)
-    return c.json({ reviews: data ?? [] })
+    return c.json({ reviews: data })
   } catch {
     return c.json({ error: 'Failed to load reviews' }, 500)
   }
@@ -91,24 +102,33 @@ app.post('/api/items/:slug/reviews', async (c) => {
   const rating = Math.round(Number(body.rating))
   if (!(rating >= 1 && rating <= 5)) return c.json({ error: 'rating must be an integer 1-5' }, 400)
   try {
-    const supabase = getSupabaseAdmin(c.env)
-    const { error } = await supabase.from('reviews').upsert(
-      {
-        item_slug: slug,
-        user_id: user.id,
-        author_name: user.username ?? null,
+    const db = getDb(c.env)
+    // reviews has no updated_at trigger (only items/subscriptions do), so set it
+    // explicitly on the conflict-update path; fresh inserts default it to now().
+    const reviewBody = typeof body.body === 'string' ? body.body.slice(0, 2000) : null
+    await db
+      .insert(reviews)
+      .values({
+        itemSlug: slug,
+        userId: user.id,
+        authorName: user.username ?? null,
         rating,
-        body: typeof body.body === 'string' ? body.body.slice(0, 2000) : null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'item_slug,user_id' }
-    )
-    if (error) return c.json({ error: 'Failed to submit review' }, 500)
-    const { data: rows } = await supabase.from('reviews').select('rating').eq('item_slug', slug)
-    const count = rows?.length ?? 0
-    const avg = count > 0 ? rows!.reduce((s, r) => s + (r.rating as number), 0) / count : 0
+        body: reviewBody,
+      })
+      .onConflictDoUpdate({
+        target: [reviews.itemSlug, reviews.userId],
+        set: {
+          authorName: user.username ?? null,
+          rating,
+          body: reviewBody,
+          updatedAt: sql`now()`,
+        },
+      })
+    const rows = await db.select({ rating: reviews.rating }).from(reviews).where(eq(reviews.itemSlug, slug))
+    const count = rows.length
+    const avg = count > 0 ? rows.reduce((s, r) => s + r.rating, 0) / count : 0
     const rounded = Math.round(avg * 10) / 10
-    await supabase.from('items').update({ rating: rounded, review_count: count }).eq('slug', slug)
+    await db.update(items).set({ rating: String(rounded), reviewCount: count }).where(eq(items.slug, slug))
     return c.json({ ok: true, rating: rounded, reviewCount: count })
   } catch {
     return c.json({ error: 'Failed to submit review' }, 500)
@@ -119,14 +139,14 @@ app.post('/api/items/:slug/reviews', async (c) => {
 app.get('/api/items/:slug/versions', async (c) => {
   const slug = c.req.param('slug')
   try {
-    const supabase = getSupabaseAdmin(c.env)
-    const { data } = await supabase
-      .from('item_versions')
-      .select('version, published_at')
-      .eq('item_slug', slug)
-      .order('published_at', { ascending: false })
+    const db = getDb(c.env)
+    const data = await db
+      .select({ version: itemVersions.version, published_at: itemVersions.publishedAt })
+      .from(itemVersions)
+      .where(eq(itemVersions.itemSlug, slug))
+      .orderBy(desc(itemVersions.publishedAt))
       .limit(50)
-    return c.json({ versions: data ?? [] })
+    return c.json({ versions: data })
   } catch {
     return c.json({ error: 'Failed to load versions' }, 500)
   }

@@ -1,8 +1,8 @@
 import type { Item } from '@as/types'
-import { getSupabaseAdmin, type SupabaseEnv } from './supabase'
-import { mapItem, type DBItem, type DBPublisher } from './db-types'
-
-const ITEM_SELECT = '*, publishers(*)'
+import { and, desc, eq } from 'drizzle-orm'
+import { getDb, type Database, type DbEnv } from './db/client'
+import { items, publishers } from './db/schema'
+import { mapItem } from './db-types'
 
 export interface CreateItemInput {
   slug: string
@@ -38,52 +38,59 @@ export function validateCreateItem(body: CreateItemInput): { error: string; stat
   return null
 }
 
-async function resolvePublisherId(supabase: ReturnType<typeof getSupabaseAdmin>, username: string): Promise<string | null> {
-  const { data } = await supabase.from('publishers').select('id').eq('slug', username).limit(1).maybeSingle()
-  return data ? (data as { id: string }).id : null
+async function resolvePublisherId(db: Database, username: string): Promise<string | null> {
+  const rows = await db.select({ id: publishers.id }).from(publishers).where(eq(publishers.slug, username)).limit(1)
+  return rows[0]?.id ?? null
 }
 
 /** Returns all items for the authenticated publisher (any status), newest first. */
-export async function getMyItems(env: SupabaseEnv | undefined, username: string): Promise<{ data: Item[]; error: string | null }> {
-  const supabase = getSupabaseAdmin(env)
-  const publisherId = await resolvePublisherId(supabase, username)
-  if (!publisherId) return { data: [], error: null }
-  const { data, error } = await supabase
-    .from('items')
-    .select(ITEM_SELECT)
-    .eq('publisher_id', publisherId)
-    .order('created_at', { ascending: false })
-  if (error) return { data: [], error: (error as { message?: string }).message ?? 'Query failed' }
-  const rows = (data ?? []) as Array<DBItem & { publishers: DBPublisher }>
-  return { data: rows.map(mapItem), error: null }
+export async function getMyItems(env: DbEnv | undefined, username: string): Promise<{ data: Item[]; error: string | null }> {
+  try {
+    const db = getDb(env)
+    const publisherId = await resolvePublisherId(db, username)
+    if (!publisherId) return { data: [], error: null }
+    const rows = await db
+      .select()
+      .from(items)
+      .innerJoin(publishers, eq(items.publisherId, publishers.id))
+      .where(eq(items.publisherId, publisherId))
+      .orderBy(desc(items.createdAt))
+    return { data: rows.map((r) => mapItem({ ...r.items, publisher: r.publishers })), error: null }
+  } catch (e) {
+    return { data: [], error: (e as Error).message ?? 'Query failed' }
+  }
 }
 
 /** Inserts a pending item owned by the authenticated publisher. */
 export async function createItem(
-  env: SupabaseEnv | undefined,
+  env: DbEnv | undefined,
   username: string,
   body: CreateItemInput
 ): Promise<{ ok: true } | { error: string; status: number }> {
-  const supabase = getSupabaseAdmin(env)
-  const publisherId = await resolvePublisherId(supabase, username)
+  const db = getDb(env)
+  const publisherId = await resolvePublisherId(db, username)
   if (!publisherId) return { error: 'Publisher profile not found. Please create one first.', status: 422 }
 
-  const { error } = await supabase.from('items').insert({
-    slug: body.slug,
-    name: body.name,
-    description: body.description,
-    category: body.category,
-    version: body.version,
-    publisher_id: publisherId,
-    compatible_with: body.compatibleWith ?? [],
-    tags: body.tags ?? [],
-    install_hook: { steps: [] },
-    metadata: body.metadata ?? {},
-    status: 'pending',
-  })
-  if (error) {
-    if ((error as { code?: string }).code === '23505') return { error: 'An item with this slug already exists', status: 409 }
+  try {
+    await db.insert(items).values({
+      slug: body.slug,
+      name: body.name,
+      description: body.description,
+      category: body.category,
+      version: body.version,
+      publisherId,
+      compatibleWith: body.compatibleWith ?? [],
+      tags: body.tags ?? [],
+      installHook: { steps: [] },
+      metadata: body.metadata ?? {},
+      status: 'pending',
+    })
+    return { ok: true }
+  } catch (e) {
+    const err = e as { code?: string; message?: string }
+    if (err.code === '23505' || err.message?.includes('duplicate key')) {
+      return { error: 'An item with this slug already exists', status: 409 }
+    }
     return { error: 'Failed to create item', status: 500 }
   }
-  return { ok: true }
 }
