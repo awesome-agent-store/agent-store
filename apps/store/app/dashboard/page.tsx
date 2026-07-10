@@ -36,7 +36,7 @@ function StatTile({ label, value, hint }: { label: string; value: string; hint?:
 }
 
 export default async function DashboardPage() {
-  const { data: sessionData } = await auth.getSession()
+  const { data: sessionData } = await auth().getSession()
   const user = sessionData?.user
   if (!user) redirect('/')
 

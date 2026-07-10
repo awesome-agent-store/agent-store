@@ -14,7 +14,7 @@ export interface CurrentUser {
 // it API-side from the token.
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   try {
-    const { data } = await auth.getSession()
+    const { data } = await auth().getSession()
     const user = data?.user
     if (!user) return null
     const username = user.name ?? ''
