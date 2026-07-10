@@ -12,6 +12,8 @@ export async function GET(request: Request) {
       origin,
       cookie: request.headers.get('cookie') ?? '',
     },
+    // Better Auth's sign-out rejects an empty JSON body (FST_ERR_CTP_EMPTY_JSON_BODY).
+    body: '{}',
   }).catch(() => null)
 
   const redirect = NextResponse.redirect(new URL('/', request.url))
