@@ -4,9 +4,8 @@ name: Deploy store to Cloudflare
 # Gated on the e2e workflow (workflow_run) AND on the store actually having
 # changed — workflow_run has no native `paths`, so the `changes` job computes the
 # diff range from the previous e2e run and only lets `deploy` run when
-# apps/store, packages, or the lockfile changed. Needs two repo secrets:
-#   CLOUDFLARE_API_TOKEN          — a token with "Edit Cloudflare Workers" permission
-#   NEXT_PUBLIC_SUPABASE_ANON_KEY — the public anon key (inlined at build)
+# apps/store, packages, or the lockfile changed. Needs the repo secret
+#   CLOUDFLARE_API_TOKEN — a token with "Edit Cloudflare Workers" permission
 # and the CLOUDFLARE_ACCOUNT_ID repo variable.
 on:
   workflow_run:
@@ -81,8 +80,6 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: https://as-api-test.phenix3443.workers.dev
           NEXT_PUBLIC_SITE_URL: https://agent-store.panghuli.tech
-          NEXT_PUBLIC_SUPABASE_URL: https://faiygihglitiuqywajyh.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Deploy to Cloudflare
         run: pnpm --filter @as/store exec wrangler deploy
