@@ -203,21 +203,47 @@ app.post('/api/billing/checkout', async (c) => {
   // Bind the purchase to the logged-in app user when a valid token is present, so
   // the webhook can link the subscription to their account (buyer_identity).
   const user = await getAuthUser(c.env, c.req.header('Authorization'))
+
+  // Trials de-duplicate on a stable, merchant-controlled buyer identity. An
+  // anonymous checkout lets the buyer self-report any email and re-claim the
+  // trial, so a trial requires an authenticated identity to bind against.
+  if (withTrial && !user) return c.json({ error: 'Sign in to start a free trial' }, 401)
+
   const buyerEmail = body.email ?? user?.email
   const metadata: Record<string, string> = {}
   if (user) metadata['userId'] = user.id
   if (buyerEmail) metadata['buyerEmail'] = buyerEmail
 
+  const successUrl = body.successUrl ?? checkoutSuccessUrl(c.env)
+  // Echoed back on webhooks (event.data.orderMetadata) to bind the subscription.
+  const orderMetadata = Object.keys(metadata).length > 0 ? metadata : undefined
+
   try {
-    const session = await client.checkout.createSession({
+    if (user) {
+      // Authenticated checkout binds the order to a merchant-controlled buyer
+      // identity (user.id). The order stays tied to this identity even if the
+      // buyer edits the email on the checkout form, so trials can't be re-farmed.
+      const session = await client.checkout.authenticated.create({
+        productId,
+        currency: 'USD',
+        buyerIdentity: user.id,
+        buyerEmail,
+        successUrl,
+        metadata: orderMetadata,
+        // Start on the free trial for subscription checkouts that requested it.
+        ...(withTrial ? { withTrial: true } : {}),
+      })
+      return c.json({ checkoutUrl: session.checkoutUrl, sessionId: session.sessionId })
+    }
+    // Anonymous checkout has no stable identity (buyer self-reports email), so it
+    // must never grant a trial — `withTrial` is guarded off above and pinned false.
+    const session = await client.checkout.anonymous.create({
       productId,
       currency: 'USD',
       buyerEmail,
-      successUrl: body.successUrl ?? checkoutSuccessUrl(c.env),
-      // Echoed back on webhooks (event.data.orderMetadata) to bind the subscription.
-      metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
-      // Start on the free trial for subscription checkouts that requested it.
-      ...(withTrial ? { withTrial: true } : {}),
+      successUrl,
+      metadata: orderMetadata,
+      withTrial: false,
     })
     return c.json({ checkoutUrl: session.checkoutUrl, sessionId: session.sessionId })
   } catch {
