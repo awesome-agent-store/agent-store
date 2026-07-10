@@ -11,8 +11,3 @@ DATABASE_URL="postgresql://<user>:<password>@<host>/<db>?sslmode=require"
 # dashboard → project → Auth. Auth data syncs into the neon_auth schema.
 NEON_AUTH_BASE_URL="https://<endpoint>.neonauth.<region>.aws.neon.tech/<db>/auth"
 NEON_AUTH_JWKS_URL="https://<endpoint>.neonauth.<region>.aws.neon.tech/<db>/auth/.well-known/jwks.json"
-
-# ── Legacy Supabase (still used until Phase 1/2 land; remove in Phase 3) ──
-SUPABASE_URL=""
-SUPABASE_ANON_KEY=""
-SUPABASE_SERVICE_ROLE_KEY=""

@@ -1,8 +1,7 @@
 # Cloudflare Workers config for the catalog API (apps/api).
 # Secrets are NOT stored here — set per environment with:
-#   wrangler secret put DATABASE_URL --env test    # Neon (data layer, Drizzle)
-#   wrangler secret put SUPABASE_URL --env test     # auth only (until Phase 2)
-#   wrangler secret put SUPABASE_ANON_KEY --env test
+#   wrangler secret put DATABASE_URL --env test         # Neon (data layer, Drizzle)
+#   wrangler secret put NEON_AUTH_JWKS_URL --env test    # Neon Auth (JWT verify)
 #
 # Deploy:  wrangler deploy --env test        (→ as-api-test.<subdomain>.workers.dev)
 #          wrangler deploy --env production   (→ as-api-prod.<subdomain>.workers.dev)

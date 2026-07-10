@@ -5,7 +5,6 @@ import { verifyWebhook, type WebhookEvent, type WebhookEventData } from '@waffo/
 import { getItems, getItemBySlug, getPublisherBySlug, getPublisherItems } from './queries'
 import { getDb, type DbEnv } from './db/client'
 import { itemVersions, items, reviews } from './db/schema'
-import type { SupabaseEnv } from './supabase'
 import type { NeonAuthEnv } from './neon-auth'
 import { getWaffoClient, proProductId, checkoutSuccessUrl, wantsTrial, type WaffoEnv, type BillingPlan } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
@@ -21,8 +20,8 @@ import {
 
 // On Cloudflare Workers, secrets arrive as the fetch handler's `env` (Hono c.env).
 // On local Bun (Bun.serve), c.env is the Bun server object with no such keys, so
-// getSupabase()/getWaffoClient() fall back to process.env.
-export const app = new Hono<{ Bindings: SupabaseEnv & WaffoEnv & DbEnv & NeonAuthEnv }>()
+// getDb()/getWaffoClient() fall back to process.env.
+export const app = new Hono<{ Bindings: WaffoEnv & DbEnv & NeonAuthEnv }>()
 
 app.use('/api/*', cors())
 
