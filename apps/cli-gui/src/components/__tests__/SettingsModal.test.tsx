@@ -6,18 +6,9 @@ const openMock = mock(async () => {})
 mock.module('../../lib/openExternal', () => ({ openExternal: openMock }))
 mock.module('../../lib/deepLink', () => ({ onDeepLink: async () => () => {} }))
 
-const signInWithOAuth = mock(async () => ({ data: { url: 'https://github.com/login/oauth?x=1' }, error: null }))
-const fakeClient = {
-  auth: {
-    getSession: mock(async () => ({ data: { session: null } })),
-    onAuthStateChange: mock(() => ({ data: { subscription: { unsubscribe: () => {} } } })),
-    signInWithOAuth,
-    exchangeCodeForSession: mock(async () => ({ data: {}, error: null })),
-    signOut: mock(async () => ({ error: null })),
-  },
-}
-mock.module('../../lib/supabase', () => ({
-  getSupabaseClient: () => fakeClient,
+mock.module('../../lib/neonAuth', () => ({
+  getStoreBaseUrl: () => 'https://store.test',
+  emailFromJwt: () => 'dev@example.com',
   AUTH_REDIRECT_URL: 'agent-store://auth-callback',
 }))
 
@@ -30,7 +21,6 @@ afterEach(() => {
   cleanup()
   mock.restore()
   openMock.mockClear()
-  signInWithOAuth.mockClear()
 })
 
 function renderModal() {
@@ -61,11 +51,10 @@ test('defaults to the account tab, showing logged-out state and a free-plan upgr
   expect(screen.getByText('升级 Pro')).toBeInTheDocument()
 })
 
-test('clicking GitHub 登录 starts the OAuth flow and opens the browser', async () => {
+test('clicking GitHub 登录 opens the store relay page in the browser', async () => {
   renderModal()
   fireEvent.click(await screen.findByText('GitHub 登录'))
-  await waitFor(() => expect(signInWithOAuth).toHaveBeenCalled())
-  await waitFor(() => expect(openMock).toHaveBeenCalledWith('https://github.com/login/oauth?x=1'))
+  await waitFor(() => expect(openMock).toHaveBeenCalledWith('https://store.test/auth/desktop?provider=github'))
 })
 
 test('clicking 升级 Pro creates a checkout session and opens the checkout url', async () => {
