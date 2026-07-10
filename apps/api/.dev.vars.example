@@ -1,0 +1,18 @@
+# Local secrets for the catalog API (apps/api). Copy to `.dev.vars` and fill in.
+# Workers reads `.dev.vars` in dev; drizzle-kit reads it via --env-file.
+# Never commit `.dev.vars` (it is gitignored).
+
+# Neon Postgres connection string (pooled). Get it from the Neon dashboard →
+# project agent-store-test → Connection Details.
+DATABASE_URL="postgresql://<user>:<password>@<host>/<db>?sslmode=require"
+
+# ── Neon Auth (managed Better Auth) — wired in Phase 2 ──
+# From: POST /projects/{id}/branches/{branch}/auth response, or the Neon
+# dashboard → project → Auth. Auth data syncs into the neon_auth schema.
+NEON_AUTH_BASE_URL="https://<endpoint>.neonauth.<region>.aws.neon.tech/<db>/auth"
+NEON_AUTH_JWKS_URL="https://<endpoint>.neonauth.<region>.aws.neon.tech/<db>/auth/.well-known/jwks.json"
+
+# ── Legacy Supabase (still used until Phase 1/2 land; remove in Phase 3) ──
+SUPABASE_URL=""
+SUPABASE_ANON_KEY=""
+SUPABASE_SERVICE_ROLE_KEY=""

@@ -34,6 +34,10 @@ apps/store/.open-next/
 .wrangler/
 apps/*/.wrangler/
 
+# Workers local secrets (keep .dev.vars.example tracked)
+.dev.vars
+apps/*/.dev.vars
+
 # local keys (never commit)
 keys/
 
