@@ -134,6 +134,12 @@ export async function duplicateProviderConnection(
   } catch {
     // source has no config.json — fall back to an empty object
   }
+  // Duplicating copies configuration, not credentials. readProviderConnection
+  // accepts three credential forms — apiKey, its `token` alias, and the `apiKeys`
+  // rotation list — so all three must be stripped, or the copy would silently
+  // inherit the source's secrets once enabled.
   if ('apiKey' in config) config['apiKey'] = ''
+  delete config['apiKeys']
+  delete config['token']
   await writeFile(join(targetDir, 'config.json'), JSON.stringify(config, null, 2))
 }

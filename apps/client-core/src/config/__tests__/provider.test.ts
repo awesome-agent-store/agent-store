@@ -66,6 +66,41 @@ test('duplicateProviderConnection copies manifest with new slug/id and appends a
   expect(config).toEqual({ apiKey: '', baseUrl: 'https://x.com' })
 })
 
+test('duplicateProviderConnection strips every credential alias (apiKey, apiKeys, token)', async () => {
+  const sourceDir = join(dir, 'source-secrets')
+  const targetDir = join(dir, 'target-secrets')
+  await mkdir(sourceDir, { recursive: true })
+  await writeFile(join(sourceDir, 'manifest.json'), JSON.stringify({ id: 'yls', slug: 'yls', name: 'yls' }))
+  await writeFile(
+    join(sourceDir, 'config.json'),
+    JSON.stringify({ token: 'tok-secret', apiKeys: ['key-a', 'key-b'], apiKey: 'key-single', baseUrl: 'https://x.com' })
+  )
+
+  await duplicateProviderConnection(sourceDir, targetDir, 'yls-secrets-copy')
+
+  const config = JSON.parse(await readFile(join(targetDir, 'config.json'), 'utf-8'))
+  expect(config.apiKey).toBe('')
+  expect(config.apiKeys).toBeUndefined()
+  expect(config.token).toBeUndefined()
+  expect(config.baseUrl).toBe('https://x.com')
+})
+
+test('duplicateProviderConnection drops a token-only credential so the copy has no key', async () => {
+  const sourceDir = join(dir, 'source-token-only')
+  const targetDir = join(dir, 'target-token-only')
+  await mkdir(sourceDir, { recursive: true })
+  await writeFile(join(sourceDir, 'manifest.json'), JSON.stringify({ id: 'yls', slug: 'yls', name: 'yls' }))
+  await writeFile(join(sourceDir, 'config.json'), JSON.stringify({ token: 'tok-secret', baseUrl: 'https://x.com' }))
+
+  await duplicateProviderConnection(sourceDir, targetDir, 'yls-token-copy')
+
+  const config = JSON.parse(await readFile(join(targetDir, 'config.json'), 'utf-8'))
+  expect(config.token).toBeUndefined()
+  // The read layer must not surface a key from the copy (token was its only credential).
+  const conn = await readProviderConnection(targetDir)
+  expect(conn.apiKey).toBeUndefined()
+})
+
 test('duplicateProviderConnection writes an empty config.json when the source has none', async () => {
   const sourceDir = join(dir, 'source-no-config')
   const targetDir = join(dir, 'target-no-config')
