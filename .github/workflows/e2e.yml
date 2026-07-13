@@ -6,7 +6,7 @@ name: e2e
 # deploy-store is gated on this workflow succeeding (see deploy-store.yml).
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 

@@ -1,11 +1,13 @@
 name: Deploy API to Cloudflare
 
-# Deploys the catalog API (apps/api) to Cloudflare Workers, per branch:
-#   dev  → --env test        (as-api-test  → Neon agent-store-test)
-#   main → --env production   (as-api-prod  → Neon agent-store)
-# Same gating as deploy-store: waits on the e2e workflow (workflow_run) and only
-# deploys when apps/api, packages, or the lockfile changed on the diff range.
-# Per-env secrets (DATABASE_URL, NEON_AUTH_JWKS_URL, WAFFO_*) are set once with
+# Deploys the catalog API (apps/api) to Cloudflare Workers:
+#   push/merge to main → --env test        (as-api-test  → Neon agent-store-test)
+#   push a release tag v* → --env production (as-api-prod  → Neon agent-store)
+# Development happens on feature branches off main (PR-gated by e2e); production
+# ships only when you cut a `v*` release tag. The main→test path waits on the e2e
+# workflow (workflow_run) and only deploys when apps/api, packages, or the lockfile
+# changed; a release tag always deploys. Per-env secrets (DATABASE_URL,
+# NEON_AUTH_JWKS_URL, WAFFO_*) are set once with
 #   wrangler secret put <NAME> --env <test|production>
 # and are NOT managed here. Needs repo secret CLOUDFLARE_API_TOKEN and variable
 # CLOUDFLARE_ACCOUNT_ID.
@@ -13,13 +15,15 @@ on:
   workflow_run:
     workflows: [e2e]
     types: [completed]
-    branches: [main, dev]
+    branches: [main]
+  push:
+    tags: ['v*']
   workflow_dispatch:
 
 jobs:
   changes:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: read
       actions: read
@@ -29,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
       - name: Decide target env and whether the API changed
         id: decide
@@ -37,19 +41,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
           EVENT: ${{ github.event_name }}
         run: |
           set -uo pipefail
-          case "$BRANCH" in
-            main) echo "env=production" >> "$GITHUB_OUTPUT" ;;
-            dev)  echo "env=test" >> "$GITHUB_OUTPUT" ;;
-            *) echo "branch '$BRANCH' is not main/dev → skip"; echo "deploy=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
-          esac
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            echo "manual dispatch → deploy"; echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0
+          if [ "$EVENT" = "push" ]; then
+            echo "env=production" >> "$GITHUB_OUTPUT"
+            echo "release tag → deploy production"; echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          PREV=$(gh api "repos/$REPO/actions/workflows/e2e.yml/runs?branch=$BRANCH&per_page=10" \
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "env=test" >> "$GITHUB_OUTPUT"
+            echo "manual dispatch → deploy test"; echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "env=test" >> "$GITHUB_OUTPUT"
+          PREV=$(gh api "repos/$REPO/actions/workflows/e2e.yml/runs?branch=main&per_page=10" \
             --jq "[.workflow_runs[].head_sha] | map(select(. != \"$HEAD_SHA\")) | .[0] // empty")
           if [ -z "$PREV" ] || ! git cat-file -e "${PREV}^{commit}" 2>/dev/null; then
             echo "no reachable previous run → deploy"; echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0
@@ -70,7 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:

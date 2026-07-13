@@ -5,18 +5,20 @@
 
 ---
 
-## 分支 → 环境（CI/CD）
+## 触发 → 环境（CI/CD）
 
-推送到分支即部署对应环境，由 GitHub Actions 完成（`e2e` 通过后触发
-`deploy-api` / `deploy-store`，仅当 `apps/api` / `apps/store` / `packages` / lockfile
-变更时才部署）：
+由 GitHub Actions 完成（`deploy-api` / `deploy-store`）：
 
-| 分支 | wrangler env | API worker | Neon 库 | Store worker | 域名 |
+| 触发 | wrangler env | API worker | Neon 库 | Store worker | 域名 |
 |---|---|---|---|---|---|
-| `dev` | `test` | `as-api-test` | `agent-store-test`（late-sea） | `agent-store-web-test` | `test.agent-store.panghuli.tech` |
-| `main` | `production` | `as-api-prod` | `agent-store`（jolly-breeze） | `agent-store-web` | `agent-store.panghuli.tech` |
+| push/merge 到 `main` | `test` | `as-api-test` | `agent-store-test`（late-sea） | `agent-store-web-test` | `test.agent-store.panghuli.tech` |
+| push 版本 tag `v*` | `production` | `as-api-prod` | `agent-store`（jolly-breeze） | `agent-store-web` | `agent-store.panghuli.tech` |
 
-- Store 的 `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_SITE_URL` 在 CI 构建时按分支注入（客户端 bundle 烘焙）；
+- **开发**：基于 `main` 建功能分支 → 开 PR（e2e 门控）→ 合入 `main`。合入即部署**测试**环境
+  （`e2e` 通过后触发 `deploy-*`，仅当 `apps/api` / `apps/store` / `packages` / lockfile 变更时才部署）。
+- **发布生产**：打并推送 `v*` tag（如 `git tag v0.1.0 && git push origin v0.1.0`）。tag 总是部署生产，
+  同一个 tag 也驱动桌面端发布（`release.yml`）—— 一次 tag = 一次完整发布。
+- Store 的 `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_SITE_URL` 在 CI 构建时按目标 env 注入（客户端 bundle 烘焙）；
   服务端 `API_URL` 走 `apps/store/wrangler.jsonc` 的 `env.<test|production>.vars`。
 - 每个 env 的 Worker secret（`DATABASE_URL` / `NEON_AUTH_JWKS_URL` / `WAFFO_*`）一次性用
   `wrangler secret put <NAME> --env <test|production>` 注入，不入库、不由 CI 管理。
@@ -115,19 +117,21 @@ wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env test
 
 ## C. 线上生产环境（核心已上线 ✅）
 
-`main` 分支即生产，CI 自动部署（见顶部「分支 → 环境」表）。已就绪：
+推 `v*` release tag 即部署生产（见顶部「触发 → 环境」表）。已就绪：
 
 - **API** `as-api-prod`（Cloudflare Workers）：https://as-api-prod.phenix3443.workers.dev
   - 数据层 Neon `agent-store`（jolly-breeze，us-east-1），已 `drizzle-kit migrate` 建表。
   - Neon Auth 已 provision（JWKS 已注入 Worker secret），trusted origin 含
     `https://agent-store.panghuli.tech`。
   - 目录数据：从 `supabase/seed.sql` 的真实爬取目录导入，去掉纯本地测试的 `local` provider。
+  - **GitHub OAuth ✅**：standard App `Ov23libYqp7LUPlxHdMN`，回调 `…/neondb/auth/callback/github`
+    （creds 在 `.secrets/github/prod-oauth.yaml`）。
 - **Store** `agent-store-web`（OpenNext on Workers）：https://agent-store.panghuli.tech → prod API。
 - **Waffo（MoR 支付）**：当前复用 testnet 商户/产品密钥作为过渡；真实生产收款需 KYB 通过后
   换正式密钥（`wrangler secret put WAFFO_* --env production`）。
 
 ### 尚待完善
-- **prod OAuth 应用**：prod Neon Auth 目前仅 shared Google；GitHub / 正式 Google 登录需在
-  各自控制台新建 OAuth App（回调指向 `agent-store.panghuli.tech`）后
-  `configure_neon_auth` 接入（浏览器操作，需你来做一次）。
+- **正式 Google OAuth**：prod 目前 GitHub（standard）+ Google（shared）；品牌化 Google 登录需
+  新建 Google OAuth App 后经 REST `/auth/oauth_providers` 接入（同 GitHub 流程）。
+- **Waffo 生产密钥**：KYB 通过后替换 testnet 过渡密钥。
 - 桌面端分发（Releases + R2 镜像 + Tauri updater + 签名）。

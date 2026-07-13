@@ -1,28 +1,29 @@
 name: Deploy store to Cloudflare
 
-# Builds the Next.js store with OpenNext and deploys it to Cloudflare Workers,
-# per branch:
-#   dev  → --env test        (agent-store-web-test, test.agent-store.panghuli.tech → test API)
-#   main → --env production   (agent-store-web,      agent-store.panghuli.tech      → prod API)
-# Gated on the e2e workflow (workflow_run) AND on the store actually having
-# changed — workflow_run has no native `paths`, so the `changes` job computes the
-# diff range from the previous e2e run on the same branch and only lets `deploy`
-# run when apps/store, packages, or the lockfile changed. Needs the repo secret
-#   CLOUDFLARE_API_TOKEN — a token with "Edit Cloudflare Workers" permission
-# and the CLOUDFLARE_ACCOUNT_ID repo variable.
+# Builds the Next.js store with OpenNext and deploys it to Cloudflare Workers:
+#   push/merge to main → --env test        (agent-store-web-test, test.agent-store.panghuli.tech → test API)
+#   push a release tag v* → --env production (agent-store-web,      agent-store.panghuli.tech      → prod API)
+# Development happens on feature branches off main (PR-gated by e2e); production
+# ships only when you cut a `v*` release tag (same tag drives the desktop release
+# in release.yml). The main→test path waits on the e2e workflow (workflow_run) and
+# only deploys when apps/store, packages, or the lockfile changed; a release tag
+# always deploys. Needs repo secret CLOUDFLARE_API_TOKEN and variable
+# CLOUDFLARE_ACCOUNT_ID.
 on:
   workflow_run:
     workflows: [e2e]
     types: [completed]
-    branches: [main, dev]
+    branches: [main]
+  push:
+    tags: ['v*']
   workflow_dispatch:
 
 jobs:
   changes:
     runs-on: ubuntu-latest
-    # Only proceed when the gating e2e run succeeded (manual dispatch has no
-    # workflow_run context, so allow that path through too).
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # Proceed for release tags and manual dispatch, or when the gating e2e run
+    # (main) succeeded.
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: read
       actions: read
@@ -32,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
       - name: Decide target env and whether the store changed
         id: decide
@@ -40,21 +41,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
           EVENT: ${{ github.event_name }}
         run: |
           set -uo pipefail
-          # Map branch → wrangler env. Only main/dev deploy.
-          case "$BRANCH" in
-            main) echo "env=production" >> "$GITHUB_OUTPUT" ;;
-            dev)  echo "env=test" >> "$GITHUB_OUTPUT" ;;
-            *) echo "branch '$BRANCH' is not main/dev → skip"; echo "deploy=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
-          esac
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            echo "manual dispatch → deploy"; echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0
+          # Release tag → production, always deploy (an explicit release).
+          if [ "$EVENT" = "push" ]; then
+            echo "env=production" >> "$GITHUB_OUTPUT"
+            echo "release tag → deploy production"; echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          # Previous e2e run on the same branch gives the diff range (covers multi-commit pushes).
-          PREV=$(gh api "repos/$REPO/actions/workflows/e2e.yml/runs?branch=$BRANCH&per_page=10" \
+          # Manual dispatch → test.
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "env=test" >> "$GITHUB_OUTPUT"
+            echo "manual dispatch → deploy test"; echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # e2e on main succeeded → test, gated on the store actually changing.
+          echo "env=test" >> "$GITHUB_OUTPUT"
+          PREV=$(gh api "repos/$REPO/actions/workflows/e2e.yml/runs?branch=main&per_page=10" \
             --jq "[.workflow_runs[].head_sha] | map(select(. != \"$HEAD_SHA\")) | .[0] // empty")
           if [ -z "$PREV" ] || ! git cat-file -e "${PREV}^{commit}" 2>/dev/null; then
             echo "no reachable previous run → deploy"; echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0
@@ -75,7 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
