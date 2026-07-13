@@ -11,7 +11,6 @@ test-output.txt
 image.png
 ai-agent-store-icon-under-1mb.jpg
 claude-fable-5.md
-supabase
 tasks
 docs
 !docker/assets

@@ -1,39 +1,45 @@
 # Makefile — Local development workflow for agent-store
-# Requires: supabase CLI, Docker, pnpm, Bun
+# Requires: neonctl (run `neonctl auth` once), pnpm, Bun, psql, Docker (e2e-docker only)
+#
+# Local dev/e2e run against ephemeral Neon branches — copy-on-write clones of the
+# test project's `main` branch that inherit its schema + data. No local Postgres.
 
-.PHONY: setup seed dev dev-api dev-gui build-cli e2e stop status
+.PHONY: setup seed dev dev-api dev-gui build-cli e2e e2e-docker-build e2e-docker stop status
 
-## One-time setup: install CLI, init, start Supabase, seed data, create .env.local
+NEON_PROJECT ?= late-sea-44274892
+NEON_DEV_BRANCH ?= dev-$(shell whoami)
+
+## One-time setup: install Neon CLI, authenticate, create .env.local
 setup:
-	brew install supabase/tap/supabase
-	@test -f supabase/config.toml || supabase init
-	supabase start
-	$(MAKE) seed
+	@command -v neonctl >/dev/null || npm i -g neonctl
+	neonctl auth
+	@test -f apps/store/.env.local || cp apps/store/.env.local.example apps/store/.env.local
 	@echo ""
-	@echo "Next: create apps/store/.env.local with credentials from 'make status'"
-	@echo "Then: make dev"
+	@echo "Next: fill apps/store/.env.local (Neon Auth creds), then: make dev"
+	@echo "Your dev branch ($(NEON_DEV_BRANCH)) is created on first 'make dev'."
 
-## Re-apply migrations + seed (resets all local data)
+## Reset your Neon dev branch to the test project's main (drops local changes,
+## re-inherits the current test schema + data)
 seed:
-	supabase db reset
+	neonctl branches reset $(NEON_DEV_BRANCH) --project-id $(NEON_PROJECT)
 
-## Start web store test environment: Supabase (if not running) + catalog API on
-## :3001 (background) + store on :3000. The store reads its catalog from the API
-## server (same source as the CLI) via API_URL; the API reads Supabase creds from
-## apps/store/.env.local.
+## Start web store test environment: catalog API on :3001 (background) + store on
+## :3000. The store reads its catalog from the API server (same source as the CLI)
+## via API_URL; the API reads its Neon branch DATABASE_URL from
+## scripts/neon-dev-branch.sh and Neon Auth creds from apps/store/.env.local.
 dev:
-	supabase start
+	DATABASE_URL="$$(scripts/neon-dev-branch.sh $(NEON_DEV_BRANCH))"; export DATABASE_URL; \
 	set -a; . apps/store/.env.local; set +a; \
 	PORT=3001 pnpm --filter=@as/api start & API_PID=$$!; \
 	trap "kill $$API_PID 2>/dev/null" EXIT; \
 	API_URL=http://127.0.0.1:3001 \
 	pnpm --filter=@as/store dev
 
-## Start the standalone catalog API server (apps/api) on :3001.
-## Reads Supabase creds from apps/store/.env.local (NEXT_PUBLIC_SUPABASE_* fallback).
-## Both the web store and the CLI consume this API — the CLI points at it via AS_STORE_URL.
+## Start the standalone catalog API server (apps/api) on :3001, pointed at your
+## Neon dev branch. Both the web store and the CLI consume this API — the CLI
+## points at it via AS_STORE_URL.
 dev-api:
-	supabase start
+	DATABASE_URL="$$(scripts/neon-dev-branch.sh $(NEON_DEV_BRANCH))"; export DATABASE_URL; \
 	set -a; . apps/store/.env.local; set +a; \
 	PORT=3001 pnpm --filter=@as/api start
 
@@ -42,7 +48,7 @@ dev-api:
 ## background, then launches the Tauri dev window pointed at it via AS_STORE_URL.
 dev-gui:
 	@mkdir -p /tmp/as-gui-dev /tmp/claude-gui-dev /tmp/codex-gui-dev
-	supabase start
+	DATABASE_URL="$$(scripts/neon-dev-branch.sh $(NEON_DEV_BRANCH))"; export DATABASE_URL; \
 	set -a; . apps/store/.env.local; set +a; \
 	PORT=3001 pnpm --filter=@as/api start & API_PID=$$!; \
 	trap "kill $$API_PID 2>/dev/null" EXIT; \
@@ -71,10 +77,11 @@ e2e-docker-build:
 e2e-docker: e2e-docker-build
 	docker run --rm -v "$(PWD)/test/provider:/secrets:ro" agent-store-e2e
 
-## Stop Supabase local stack
+## Delete your Neon dev branch (tear down the ephemeral clone)
 stop:
-	supabase stop
+	neonctl branches delete $(NEON_DEV_BRANCH) --project-id $(NEON_PROJECT)
 
-## Print local Supabase credentials (URL, anon key, service_role key)
+## Print your Neon dev branch details + pooled connection string
 status:
-	supabase status
+	neonctl branches get $(NEON_DEV_BRANCH) --project-id $(NEON_PROJECT)
+	@neonctl connection-string $(NEON_DEV_BRANCH) --project-id $(NEON_PROJECT) --pooled

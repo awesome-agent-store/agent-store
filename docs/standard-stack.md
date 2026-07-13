@@ -1,20 +1,20 @@
 # 标准后端栈（所有独立产品复用）
 
 > 定稿 2026-07-10。这是每个新产品的默认后端选型与约定。目标：**很多独立小产品、test 免费、prod 付费换稳定、环境之间零差异债**。
-> agent-store 是第一个迁到这套栈的产品（见 [`agent-store-migration.md`](./agent-store-migration.md)），迁完即作为新产品的 starter 模板。
+> agent-store 是第一个采用这套栈的产品，作为新产品的 starter 模板。
 
 ## 1. 选型总览
 
 | 层 | 选型 | 为什么 |
 |---|---|---|
 | 计算 | **Cloudflare Workers** + **Hono** | 已在用；一个账号无限 Worker，按量、边际成本≈0 |
-| 数据库 | **Neon**（serverless Postgres） | 免费档 ~100 项目 + scale-to-zero（不像 Supabase 2 项目/7 天暂停）→ test 免费；prod 上付费档换常驻+备份。**test/prod 同引擎** |
+| 数据库 | **Neon**（serverless Postgres） | 免费档 ~100 项目 + scale-to-zero → test 免费；prod 上付费档换常驻+备份。**test/prod 同引擎** |
 | 认证 | **Neon Auth**（Neon 托管的 Better Auth） | 一键开、$0 到 60K MAU、用户**直接同步进你的 Neon 库**、每项目各自隔离；底层是 Better Auth，脱离 Neon 可自托管同一个库 |
 | 数据访问 | **Drizzle ORM** | 类型安全 + 迁移工具（drizzle-kit）；不锁厂商；边缘友好 |
 | 对象存储 | **Cloudflare R2**（按需） | 同账号、零 egress |
 | 支付 | **Waffo Pancake**（MoR） | 已接；见 agent-store |
 
-**明确不用**：Supabase（免费仅 2 项目/账号 + 7 天暂停，扛不住"很多产品"）；D1/Turso（SQLite：无 RLS、单写、要把 Postgres 重写成 SQLite = 正是要避免的差异债，AI 向量也弱）。
+**明确不用**：D1/Turso（SQLite：无 RLS、单写、要把 Postgres 重写成 SQLite = 正是要避免的差异债，AI 向量也弱）。
 
 ## 2. 环境模型
 
@@ -37,15 +37,15 @@
 - **社交登录**：GitHub/Google 等在 Neon Auth 侧配置（每产品各自的 OAuth app）。
 - **消费方**：
   - Web（Next.js）：用 Neon Auth 的 SDK/组件取 session。
-  - 桌面/CLI（Tauri）：系统浏览器走 OAuth → 深链 `<app>://auth-callback` 带回 session；本地存 token，之后作为 Bearer 调 API。（此流程需实测，见迁移文档 Phase 2 spike。）
+  - 桌面/CLI（Tauri）：系统浏览器走 OAuth → 深链 `<app>://auth-callback` 带回 session；本地存 token，之后作为 Bearer 调 API。（此流程需实测。）
   - API（Worker）：校验 Neon Auth 的 session 替代原来的第三方 `getUser`。
 - **可移植退路**：Neon Auth 把 auth 绑在 Neon 上；因我们已把 Neon 定为标准 DB，这个耦合可接受。万一某产品将来不放 Neon，因底层是 Better Auth，可在别处**自托管同一个 Better Auth**，配置/心智通用。
 - **演进到 SSO**：需要跨产品单点登录时，再把某产品的 Better Auth 升级成中央 **OIDC Provider**，其它产品接入。Model 2 → 中央 SSO 平滑，反向很痛，故默认从 Model 2 起步。
 
 ## 4. 数据访问与授权
 
-- **Drizzle** 定义 schema（TS）+ `drizzle-kit` 生成/执行迁移，替代手写 SQL 迁移与 `supabase-js`。
-- **授权放在 API 层，不依赖数据库 RLS**。理由：新架构里 **API（Worker）是数据库的唯一客户端**（用 service 级连接），浏览器/桌面端只经 API 访问数据，不直连库。因此把"谁能读写什么"写进 Worker 代码，比依赖 Postgres RLS 更直观、可测试（RLS 依赖的 `auth.uid()` 是 Supabase 注入的，脱离 Supabase 就不成立）。
+- **Drizzle** 定义 schema（TS）+ `drizzle-kit` 生成/执行迁移，替代手写 SQL 迁移。
+- **授权放在 API 层，不依赖数据库 RLS**。理由：新架构里 **API（Worker）是数据库的唯一客户端**（用 service 级连接），浏览器/桌面端只经 API 访问数据，不直连库。因此把"谁能读写什么"写进 Worker 代码，比依赖 Postgres RLS 更直观、可测试（RLS 的 `auth.uid()` 依赖由数据库注入的身份，我们这套架构里不成立）。
 - 需要向量/AI：Neon 有 `pgvector`，直接用。
 
 ## 5. 配置与密钥约定

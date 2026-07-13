@@ -1578,7 +1578,7 @@ class Component extends DCLogic {
     provider: { label: '供应商', color: '#58a6f0', soft: 'rgba(88,166,240,0.16)', metaLabel: '延迟' },
   };
 
-  // Publisher tiers — mirrors supabase publishers.tier (official / verified / community)
+  // Publisher tiers — official / verified / community
   TIERS = {
     official:  { label: '官方', color: '#f0b34a', soft: 'rgba(240,179,74,0.18)' },
     verified:  { label: '已验证', color: '#58a6f0', soft: 'rgba(88,166,240,0.18)' },
@@ -1623,7 +1623,7 @@ class Component extends DCLogic {
     { id: 'aws-bedrock', type: 'provider', author: 'aws', verified: true, dl: '64k', rating: '4.5', reviews: '540', ver: '1.1.2', meta: '208ms', tags: ['enterprise', 'bedrock'], desc: '企业级托管的 Claude 端点，IAM 鉴权与私有网络接入。' },
   ];
 
-  // Category-specific metadata (mirrors items.metadata JSONB in supabase)
+  // Category-specific metadata (mirrors items.metadata JSONB)
   PROVIDER_MODELS = {
     yls: ['claude-sonnet-4', 'claude-opus-4', 'gpt-4o', 'gpt-4o-mini'],
     openrouter: ['claude-sonnet-4', 'gpt-4o', 'gemini-2.0-flash', 'llama-3.3-70b'],
@@ -1638,7 +1638,7 @@ class Component extends DCLogic {
     context7:   { transport: 'sse', url: 'https://mcp.context7.com/sse', headers: { 'X-API-Key': '${CONTEXT7_KEY}' } },
   };
   mcpMetaOf = (id) => this.MCP_META[id] || { transport: 'stdio', serverCommand: './server' };
-  contentUrlOf = (id) => 'https://store.supabase.co/skills/' + id + '.zip';
+  contentUrlOf = (id) => 'https://store.example.com/skills/' + id + '.zip';
 
   CATS = [
     { key: 'provider', label: '供应商' },

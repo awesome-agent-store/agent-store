@@ -12,12 +12,12 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-// Drizzle mirror of the Supabase migrations (supabase/migrations/001–005), used
-// as the Neon schema source of truth for the migration off Supabase.
+// Drizzle schema — the source of truth for the Neon Postgres database.
+// Migrations are generated into ./drizzle and applied with `drizzle-kit migrate`.
 //
-// Scope (Phase 0): tables, columns, types, defaults, checks, foreign keys,
-// unique constraints, and indexes — the structural schema. Deliberately NOT
-// reproduced here:
+// Scope: tables, columns, types, defaults, checks, foreign keys, unique
+// constraints, and indexes — the structural schema. Deliberately NOT reproduced
+// here:
 //   • RLS policies + anon/authenticated GRANTs — Supabase/PostgREST specific;
 //     authorization moves to the API layer (the Worker is the only DB client).
 //   • The updated_at trigger + update_updated_at() function — kept for DB-level
