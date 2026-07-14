@@ -119,7 +119,9 @@ test('forwardWithFailover falls back to the next candidate on a 5xx response', a
   expect(result.isFallback).toBe(true)
 })
 
-test('forwardWithFailover does not fall back on a 4xx response', async () => {
+test('forwardWithFailover does not fall back on an ordinary 4xx response (e.g. 400)', async () => {
+  // 400 is a client error, not a provider-health failure — classifyOutcome returns
+  // null, so it is returned to the caller as-is rather than triggering failover.
   const calls: string[] = []
   const fetchImpl = (async (url: string) => {
     calls.push(url)
@@ -139,6 +141,55 @@ test('forwardWithFailover does not fall back on a 4xx response', async () => {
   expect(result.usedSlug).toBe('primary')
   expect(result.isFallback).toBe(false)
   expect(result.response.status).toBe(400)
+})
+
+test.each([
+  ['401 (auth)', 401],
+  ['403 (auth)', 403],
+  ['429 (rate limit)', 429],
+])('forwardWithFailover falls back to the next candidate on a %s response', async (_label, status) => {
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    if (url.startsWith('https://primary')) return new Response('nope', { status })
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const result = await forwardWithFailover(
+    '/v1/messages', {}, undefined,
+    [
+      { slug: 'primary', connection: { baseUrl: 'https://primary.example', apiKey: 'k1' } },
+      { slug: 'backup', connection: { baseUrl: 'https://backup.example', apiKey: 'k2' } },
+    ],
+    fetchImpl
+  )
+
+  expect(calls).toEqual(['https://primary.example/v1/messages', 'https://backup.example/v1/messages'])
+  expect(result.usedSlug).toBe('backup')
+  expect(result.isFallback).toBe(true)
+  expect(result.response.status).toBe(200)
+})
+
+test('forwardWithFailover returns the last 401 when every candidate returns 401', async () => {
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    return new Response('unauthorized', { status: 401 })
+  }) as typeof fetch
+
+  const result = await forwardWithFailover(
+    '/v1/messages', {}, undefined,
+    [
+      { slug: 'primary', connection: { baseUrl: 'https://primary.example', apiKey: 'k1' } },
+      { slug: 'backup', connection: { baseUrl: 'https://backup.example', apiKey: 'k2' } },
+    ],
+    fetchImpl
+  )
+
+  expect(calls).toEqual(['https://primary.example/v1/messages', 'https://backup.example/v1/messages'])
+  expect(result.usedSlug).toBe('backup')
+  expect(result.isFallback).toBe(true)
+  expect(result.response.status).toBe(401)
 })
 
 test('forwardWithFailover returns the last response when every candidate fails', async () => {

@@ -1,4 +1,5 @@
 import type { ProviderAuthType } from '../config/provider'
+import { classifyOutcome } from '../usage/health-classify'
 import { applyModelMapping } from './model-mapping'
 import { isModelAllowed } from './model-whitelist'
 
@@ -94,7 +95,9 @@ export async function forwardWithFailover(
 
     onAttempt?.({ slug: candidate.slug, statusCode: response.status, latencyMs: Date.now() - attemptStart })
 
-    if (response.status >= 500) {
+    // Fail over on any provider-health failure (auth/rate_limit/overload/server),
+    // not just 5xx — these are provider-specific and recoverable on another candidate.
+    if (classifyOutcome(response.status) !== null) {
       lastResponse = response
       continue
     }

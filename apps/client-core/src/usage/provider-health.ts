@@ -1,6 +1,9 @@
 import type { Database } from 'bun:sqlite'
 import type { ProviderHealth } from '@as/types'
 import { openUsageDb } from './db'
+import { classifyOutcome, type HealthErrorKind } from './health-classify'
+
+export { classifyOutcome, type HealthErrorKind } from './health-classify'
 
 // A single upstream attempt outcome, collected during forwarding. statusCode is
 // null when the request threw before getting a response (network error).
@@ -9,8 +12,6 @@ export interface ProviderAttempt {
   statusCode: number | null
   latencyMs: number
 }
-
-export type HealthErrorKind = 'auth' | 'rate_limit' | 'overload' | 'server' | 'network'
 
 // Cooldown per error kind (ms). Classified like mature relays (CRS/claude-code-hub):
 // auth is long (the key is likely bad and won't self-heal); network is lenient
@@ -25,16 +26,6 @@ const COOLDOWN_MS: Record<HealthErrorKind, number> = {
 
 // Consecutive failures before cooling a provider down. Auth trips immediately.
 const FAILURE_THRESHOLD = 2
-
-/** Classify an attempt outcome. Returns null for outcomes that are not a provider-health failure. */
-export function classifyOutcome(statusCode: number | null): HealthErrorKind | null {
-  if (statusCode === null) return 'network'
-  if (statusCode === 401 || statusCode === 403) return 'auth'
-  if (statusCode === 429) return 'rate_limit'
-  if (statusCode === 503 || statusCode === 529) return 'overload'
-  if (statusCode >= 500) return 'server'
-  return null // 2xx/3xx and ordinary 4xx are not provider-health failures
-}
 
 interface HealthDbRow {
   provider_slug: string
