@@ -2,7 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { useState } from 'react'
 import { Check, X, Github } from 'lucide-react'
 import { useAppState, type AgentApp } from '../state/AppState'
-import { useAuth } from '../state/Auth'
+import { useAuth, type AuthProviderName } from '../state/Auth'
 import { useEntitlement } from '../state/Entitlement'
 import { useI18n, LOCALES, LOCALE_NAMES } from '../i18n'
 import { callRpc } from '../lib/rpc'
@@ -11,6 +11,18 @@ import { openExternal } from '../lib/openExternal'
 interface SettingsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+// Google's brand mark (lucide has no Google icon); mirrors docs/ui design source.
+function GoogleIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0012 23z" />
+      <path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 010-4.2V7.06H2.18a11 11 0 000 9.88l3.66-2.84z" />
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1a11 11 0 00-9.82 6.06l3.66 2.84C6.71 7.3 9.14 5.38 12 5.38z" />
+    </svg>
+  )
 }
 
 type Tab = 'account' | 'general' | 'about'
@@ -50,14 +62,25 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const isPro = entitlements.plan !== 'free'
   const avatarLetter = (email ?? 'A').charAt(0).toUpperCase()
 
-  async function handleAuth() {
+  async function handleSignIn(provider: AuthProviderName) {
     if (authBusy) return
     setAuthBusy(true)
     try {
-      if (signedIn) await signOut()
-      else await signIn('github')
+      await signIn(provider)
     } catch (err) {
-      console.error('[auth] sign-in/out failed:', err)
+      console.error('[auth] sign-in failed:', err)
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
+  async function handleSignOut() {
+    if (authBusy) return
+    setAuthBusy(true)
+    try {
+      await signOut()
+    } catch (err) {
+      console.error('[auth] sign-out failed:', err)
     } finally {
       setAuthBusy(false)
     }
@@ -134,16 +157,40 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         <span className="text-xs text-store-text-2">{signedIn ? t('settings.account.signedIn') : t('settings.account.disconnected')}</span>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleAuth}
-                      disabled={!configured || authBusy}
-                      className="flex items-center gap-1.5 rounded-[9px] border border-store-border-strong px-4 py-2 text-[12.5px] font-semibold text-store-text hover:border-store-accent hover:text-store-accent disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {!signedIn && <Github size={13} />}
-                      {signedIn ? t('settings.account.logout') : t('settings.account.githubLogin')}
-                    </button>
+                    {signedIn && (
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        disabled={!configured || authBusy}
+                        className="flex items-center gap-1.5 rounded-[9px] border border-store-border-strong px-4 py-2 text-[12.5px] font-semibold text-store-text hover:border-store-accent hover:text-store-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {t('settings.account.logout')}
+                      </button>
+                    )}
                   </div>
+
+                  {!signedIn && (
+                    <div className="mt-3 flex flex-col gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSignIn('github')}
+                        disabled={!configured || authBusy}
+                        className="flex items-center justify-center gap-2 rounded-[9px] border border-store-border-strong px-4 py-2.5 text-[12.5px] font-semibold text-store-text hover:border-store-accent hover:text-store-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Github size={14} />
+                        {t('settings.account.signInGithub')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSignIn('google')}
+                        disabled={!configured || authBusy}
+                        className="flex items-center justify-center gap-2 rounded-[9px] border border-store-border-strong px-4 py-2.5 text-[12.5px] font-semibold text-store-text hover:border-store-accent hover:text-store-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <GoogleIcon />
+                        {t('settings.account.signInGoogle')}
+                      </button>
+                    </div>
+                  )}
 
                   <div className="mt-3 flex items-center justify-between rounded-xl border border-store-border bg-store-panel px-[18px] py-3.5">
                     <div>

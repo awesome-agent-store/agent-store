@@ -46,15 +46,22 @@ function renderModal() {
 test('defaults to the account tab, showing logged-out state and a free-plan upgrade CTA', async () => {
   renderModal()
   expect(await screen.findByText('未登录')).toBeInTheDocument()
-  expect(screen.getByText('GitHub 登录')).toBeInTheDocument()
+  expect(screen.getByText('使用 GitHub 登录')).toBeInTheDocument()
+  expect(screen.getByText('使用 Google 登录')).toBeInTheDocument()
   expect(screen.getByText('订阅计划')).toBeInTheDocument()
   expect(screen.getByText('升级 Pro')).toBeInTheDocument()
 })
 
-test('clicking GitHub 登录 opens the store relay page in the browser', async () => {
+test('clicking 使用 GitHub 登录 opens the store relay page with the github provider', async () => {
   renderModal()
-  fireEvent.click(await screen.findByText('GitHub 登录'))
+  fireEvent.click(await screen.findByText('使用 GitHub 登录'))
   await waitFor(() => expect(openMock).toHaveBeenCalledWith('https://store.test/auth/desktop?provider=github'))
+})
+
+test('clicking 使用 Google 登录 opens the store relay page with the google provider', async () => {
+  renderModal()
+  fireEvent.click(await screen.findByText('使用 Google 登录'))
+  await waitFor(() => expect(openMock).toHaveBeenCalledWith('https://store.test/auth/desktop?provider=google'))
 })
 
 test('clicking 升级 Pro creates a checkout session and opens the checkout url', async () => {
