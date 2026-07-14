@@ -4,7 +4,7 @@
 # Local dev/e2e run against ephemeral Neon branches — copy-on-write clones of the
 # test project's `main` branch that inherit its schema + data. No local Postgres.
 
-.PHONY: setup seed dev dev-api dev-gui build-cli e2e e2e-docker-build e2e-docker stop status
+.PHONY: setup seed dev dev-api dev-store dev-client build-cli e2e e2e-docker-build e2e-docker stop status
 
 NEON_PROJECT ?= late-sea-44274892
 NEON_DEV_BRANCH ?= dev-$(shell whoami)
@@ -23,37 +23,40 @@ setup:
 seed:
 	neonctl branches reset $(NEON_DEV_BRANCH) --project-id $(NEON_PROJECT)
 
-## Start web store test environment: catalog API on :3001 (background) + store on
-## :3000. The store reads its catalog from the API server (same source as the CLI)
-## via API_URL; the API reads its Neon branch DATABASE_URL from
-## scripts/neon-dev-branch.sh and Neon Auth creds from apps/store/.env.local.
+## Start ALL THREE components locally against your Neon dev branch for full
+## integration testing — catalog API (:3001), web store (:3000), and the Tauri
+## desktop client — run in parallel as the three sub-targets below. Ctrl-C tears
+## all three down. Only dev-api resolves/creates the Neon dev branch, so there is
+## no first-run branch-creation race.
 dev:
-	DATABASE_URL="$$(scripts/neon-dev-branch.sh $(NEON_DEV_BRANCH))"; export DATABASE_URL; \
-	set -a; . apps/store/.env.local; set +a; \
-	PORT=3001 pnpm --filter=@as/api start & API_PID=$$!; \
-	trap "kill $$API_PID 2>/dev/null" EXIT; \
-	API_URL=http://127.0.0.1:3001 \
-	pnpm --filter=@as/store dev
+	@$(MAKE) --no-print-directory -j3 dev-api dev-store dev-client
 
-## Start the standalone catalog API server (apps/api) on :3001, pointed at your
-## Neon dev branch. Both the web store and the CLI consume this API — the CLI
-## points at it via AS_STORE_URL.
+## Catalog API server (apps/api) on :3001, pointed at your Neon dev branch (reads
+## DATABASE_URL from scripts/neon-dev-branch.sh, Neon Auth creds from
+## apps/store/.env.local). Both the web store and the CLI consume this API. Also a
+## building block of `make dev`.
 dev-api:
 	DATABASE_URL="$$(scripts/neon-dev-branch.sh $(NEON_DEV_BRANCH))"; export DATABASE_URL; \
 	set -a; . apps/store/.env.local; set +a; \
 	PORT=3001 pnpm --filter=@as/api start
 
-## Start GUI client test environment in isolated /tmp dirs — never touches your
-## real ~/.claude, ~/.codex, or ~/.agents. Starts the catalog API (apps/api) in the
-## background, then launches the Tauri dev window pointed at it via AS_STORE_URL.
-dev-gui:
-	@mkdir -p /tmp/as-gui-dev /tmp/claude-gui-dev /tmp/codex-gui-dev
-	DATABASE_URL="$$(scripts/neon-dev-branch.sh $(NEON_DEV_BRANCH))"; export DATABASE_URL; \
+## Web store (apps/store) on :3000. Reads its catalog from the local API via
+## API_URL and Neon Auth creds from apps/store/.env.local; it has no direct DB
+## access. Building block of `make dev`.
+dev-store:
 	set -a; . apps/store/.env.local; set +a; \
-	PORT=3001 pnpm --filter=@as/api start & API_PID=$$!; \
-	trap "kill $$API_PID 2>/dev/null" EXIT; \
+	API_URL=http://127.0.0.1:3001 \
+	pnpm --filter=@as/store dev
+
+## Tauri desktop client in isolated /tmp dirs — never touches your real ~/.claude,
+## ~/.codex, or ~/.agents. Reads the catalog from the local API via AS_STORE_URL;
+## its OAuth relay points at the LOCAL store via VITE_STORE_URL so sign-in
+## redirects stay local. Building block of `make dev`.
+dev-client:
+	@mkdir -p /tmp/as-gui-dev /tmp/claude-gui-dev /tmp/codex-gui-dev
 	AS_HOME=/tmp/as-gui-dev \
 	AS_STORE_URL=http://127.0.0.1:3001 \
+	VITE_STORE_URL=http://localhost:3000 \
 	CLAUDE_CONFIG_DIR=/tmp/claude-gui-dev \
 	CODEX_CONFIG_DIR=/tmp/codex-gui-dev \
 	pnpm --filter=@as/cli-gui tauri:dev
