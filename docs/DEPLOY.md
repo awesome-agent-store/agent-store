@@ -31,7 +31,7 @@
 
 | 命令 | 起什么 | 端口 |
 |---|---|---|
-| `make dev-env` | 三组件并行：目录 API(apps/api) + Web 商店(next dev) + 桌面客户端(打包为 debug `.app` 运行)。Ctrl-C 全停 | API 3001 / web 3000 / app 窗口 |
+| `make dev-env` | 三组件并行：目录 API(apps/api) + Web 商店(next dev) + 桌面客户端(打包为 debug `.app` 运行)。Ctrl-C 全停 | API/web 默认 3001/3000，被占用时自动顺延 |
 | `make dev-api` | Neon dev 分支 + 目录 API（`dev-env` 的构成，也可单跑） | API 3001 |
 | `make dev-store` | Web 商店，经 `API_URL` 读本地 API（`dev-env` 的构成） | web 3000 |
 | `make dev-client` | 桌面客户端，构建并运行 dev `.app`（独立 scheme `agent-store-dev`，深链可回跳）（`dev-env` 的构成） | app 窗口 |

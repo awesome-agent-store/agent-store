@@ -9,6 +9,12 @@
 NEON_PROJECT ?= late-sea-44274892
 NEON_DEV_BRANCH ?= dev-$(shell whoami)
 
+# Dev-server ports. `make dev-env` picks the first free ports at/above these
+# (see scripts/dev-ports.sh) and passes them to the sub-targets, so a stale
+# previous run doesn't cause EADDRINUSE. Standalone sub-targets use these defaults.
+API_PORT ?= 3001
+STORE_PORT ?= 3000
+
 ## One-time setup: install Neon CLI, authenticate, create .env.local
 setup:
 	@command -v neonctl >/dev/null || npm i -g neonctl
@@ -24,30 +30,30 @@ seed:
 	neonctl branches reset $(NEON_DEV_BRANCH) --project-id $(NEON_PROJECT)
 
 ## Start ALL THREE components locally against your Neon dev branch for full
-## integration testing — catalog API (:3001), web store (:3000), and the Tauri
-## desktop client — run in parallel as the three sub-targets below. Ctrl-C tears
-## all three down. Only dev-api resolves/creates the Neon dev branch, so there is
-## no first-run branch-creation race.
+## integration testing — catalog API, web store, and the Tauri desktop client —
+## run in parallel as the three sub-targets below. Ports are chosen dynamically
+## (first free at/above 3001 for the API, 3000 for the store) and passed to all
+## three so a stale previous run doesn't collide. Ctrl-C tears all three down.
+## Only dev-api resolves/creates the Neon dev branch, so there is no first-run race.
 dev-env:
-	@$(MAKE) --no-print-directory -j3 dev-api dev-store dev-client
+	@ports=$$(scripts/dev-ports.sh); echo "▸ dev-env $$ports"; \
+	$(MAKE) --no-print-directory -j3 dev-api dev-store dev-client $$ports
 
 ## Catalog API server (apps/api) on :3001, pointed at your Neon dev branch (reads
 ## DATABASE_URL from scripts/neon-dev-branch.sh, Neon Auth creds from
 ## apps/store/.env.local). Both the web store and the CLI consume this API. Also a
 ## building block of `make dev-env`.
 dev-api:
-	@pids=$$(lsof -ti tcp:3001); if [ -n "$$pids" ]; then echo "freeing :3001 (pid $$pids)"; kill $$pids 2>/dev/null; sleep 0.5; fi; true
 	DATABASE_URL="$$(scripts/neon-dev-branch.sh $(NEON_DEV_BRANCH))"; export DATABASE_URL; \
 	set -a; . apps/store/.env.local; set +a; \
-	PORT=3001 pnpm --filter=@as/api start
+	PORT=$(API_PORT) pnpm --filter=@as/api start
 
 ## Web store (apps/store) on :3000. Reads its catalog from the local API via
 ## API_URL and Neon Auth creds from apps/store/.env.local; it has no direct DB
 ## access. Building block of `make dev-env`.
 dev-store:
-	@pids=$$(lsof -ti tcp:3000); if [ -n "$$pids" ]; then echo "freeing :3000 (pid $$pids)"; kill $$pids 2>/dev/null; sleep 0.5; fi; true
 	set -a; . apps/store/.env.local; set +a; \
-	API_URL=http://127.0.0.1:3001 \
+	PORT=$(STORE_PORT) API_URL=http://127.0.0.1:$(API_PORT) \
 	pnpm --filter=@as/store dev
 
 ## Desktop client for local dev, in isolated /tmp dirs — never touches your real
@@ -61,8 +67,8 @@ dev-store:
 dev-client:
 	@mkdir -p /tmp/as-gui-dev /tmp/claude-gui-dev /tmp/codex-gui-dev
 	AS_HOME=/tmp/as-gui-dev \
-	AS_STORE_URL=http://127.0.0.1:3001 \
-	VITE_STORE_URL=http://localhost:3000 \
+	AS_STORE_URL=http://127.0.0.1:$(API_PORT) \
+	VITE_STORE_URL=http://localhost:$(STORE_PORT) \
 	CLAUDE_CONFIG_DIR=/tmp/claude-gui-dev \
 	CODEX_CONFIG_DIR=/tmp/codex-gui-dev \
 	bash apps/cli-gui/scripts/dev-app.sh
