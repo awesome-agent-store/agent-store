@@ -31,13 +31,14 @@
 
 | 命令 | 起什么 | 端口 |
 |---|---|---|
-| `make dev-gui` | Neon dev 分支 + 目录 API(apps/api) + 桌面客户端(Tauri)，客户端经 `AS_STORE_URL` 指向本地 API | API 3001 / app 窗口 |
-| `make dev-api` | Neon dev 分支 + 目录 API | API 3001 |
-| `make dev` | Neon dev 分支 + Web 商店(next dev) | web 3000 |
+| `make dev-env` | 三组件并行：目录 API(apps/api) + Web 商店(next dev) + 桌面客户端(打包为 debug `.app` 运行)。Ctrl-C 全停 | API 3001 / web 3000 / app 窗口 |
+| `make dev-api` | Neon dev 分支 + 目录 API（`dev-env` 的构成，也可单跑） | API 3001 |
+| `make dev-store` | Web 商店，经 `API_URL` 读本地 API（`dev-env` 的构成） | web 3000 |
+| `make dev-client` | 桌面客户端，构建并运行 dev `.app`（独立 scheme `agent-store-dev`，深链可回跳）（`dev-env` 的构成） | app 窗口 |
 | `make seed` | 把 dev 分支重置回 test `main`（重新继承当前 schema + 数据） | — |
 | `make stop` | 删除你的 Neon dev 分支 | — |
 
-- 数据可随意重置：`make seed`（`neonctl branches reset`）。dev 分支按 `dev-$(whoami)` 命名，首次 `make dev` 自动创建。
+- 数据可随意重置：`make seed`（`neonctl branches reset`）。dev 分支按 `dev-$(whoami)` 命名，首次 `make dev-env` 自动创建。
 - 本地 API 冒烟：`curl "http://127.0.0.1:3001/api/items?category=provider"`。
 - 本地绝不连云端；密钥只在 `.env.local`（已 gitignore）。
 

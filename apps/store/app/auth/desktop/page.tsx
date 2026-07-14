@@ -21,6 +21,18 @@ export default function DesktopAuthRelay() {
     const provider = params.get('provider')
     const hasVerifier = params.has('neon_auth_session_verifier')
 
+    // Which custom scheme to deep-link back to. The desktop passes ?scheme= on the
+    // first hop (dev builds use agent-store-dev, release uses agent-store); the
+    // provider round-trip drops query params, so persist it in sessionStorage and
+    // read it back on return. Allowlisted to prevent an arbitrary-scheme redirect.
+    const SCHEMES = ['agent-store', 'agent-store-dev']
+    function resolveScheme(): string {
+      const fromParam = params.get('scheme')
+      const stored = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('desktop_auth_scheme') : null
+      const s = fromParam ?? stored
+      return s && SCHEMES.includes(s) ? s : 'agent-store'
+    }
+
     async function run() {
       // Returning from the provider (or already signed in): mint a JWT and deep-link back.
       if (hasVerifier || !provider) {
@@ -31,10 +43,16 @@ export default function DesktopAuthRelay() {
           return
         }
         setStatus('登录成功，正在返回应用…')
-        window.location.href = `agent-store://auth-callback?token=${encodeURIComponent(token)}`
+        window.location.href = `${resolveScheme()}://auth-callback?token=${encodeURIComponent(token)}`
         return
       }
-      // First hop: start social sign-in, returning to this page.
+      // First hop: remember the target scheme across the provider round-trip, then
+      // start social sign-in, returning to this page.
+      try {
+        sessionStorage.setItem('desktop_auth_scheme', resolveScheme())
+      } catch {
+        // sessionStorage unavailable — fall back to the default scheme on return.
+      }
       const p = provider === 'google' ? 'google' : 'github'
       await authClient.signIn.social({ provider: p, callbackURL: '/auth/desktop' })
     }

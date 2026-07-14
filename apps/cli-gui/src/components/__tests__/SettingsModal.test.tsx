@@ -8,6 +8,7 @@ mock.module('../../lib/deepLink', () => ({ onDeepLink: async () => () => {} }))
 
 mock.module('../../lib/neonAuth', () => ({
   getStoreBaseUrl: () => 'https://store.test',
+  getAuthScheme: () => 'agent-store',
   emailFromJwt: () => 'dev@example.com',
   AUTH_REDIRECT_URL: 'agent-store://auth-callback',
 }))
@@ -55,13 +56,13 @@ test('defaults to the account tab, showing logged-out state and a free-plan upgr
 test('clicking 使用 GitHub 登录 opens the store relay page with the github provider', async () => {
   renderModal()
   fireEvent.click(await screen.findByText('使用 GitHub 登录'))
-  await waitFor(() => expect(openMock).toHaveBeenCalledWith('https://store.test/auth/desktop?provider=github'))
+  await waitFor(() => expect(openMock).toHaveBeenCalledWith('https://store.test/auth/desktop?provider=github&scheme=agent-store'))
 })
 
 test('clicking 使用 Google 登录 opens the store relay page with the google provider', async () => {
   renderModal()
   fireEvent.click(await screen.findByText('使用 Google 登录'))
-  await waitFor(() => expect(openMock).toHaveBeenCalledWith('https://store.test/auth/desktop?provider=google'))
+  await waitFor(() => expect(openMock).toHaveBeenCalledWith('https://store.test/auth/desktop?provider=google&scheme=agent-store'))
 })
 
 test('clicking 升级 Pro creates a checkout session and opens the checkout url', async () => {

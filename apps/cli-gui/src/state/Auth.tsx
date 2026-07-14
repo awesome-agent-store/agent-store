@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Entitlements } from '@as/types'
 import { openExternal } from '../lib/openExternal'
 import { onDeepLink } from '../lib/deepLink'
-import { getStoreBaseUrl, emailFromJwt } from '../lib/neonAuth'
+import { getStoreBaseUrl, getAuthScheme, emailFromJwt } from '../lib/neonAuth'
 import { callRpc } from '../lib/rpc'
 import { useEntitlement } from './Entitlement'
 
@@ -64,8 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(provider: AuthProviderName) {
     // Neon Auth rejects custom-scheme callbacks, so sign in through the web
     // store's relay page; it completes the OAuth round-trip in the system
-    // browser and deep-links a JWT back to agent-store://auth-callback.
-    await openExternal(`${getStoreBaseUrl()}/auth/desktop?provider=${provider}`)
+    // browser and deep-links a JWT back to this build's scheme. Pass our scheme
+    // so the relay bounces the token to the right build (dev vs release).
+    await openExternal(`${getStoreBaseUrl()}/auth/desktop?provider=${provider}&scheme=${getAuthScheme()}`)
   }
 
   async function completeSignIn(callbackUrl: string) {

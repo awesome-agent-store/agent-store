@@ -8,6 +8,7 @@ mock.module('../../lib/deepLink', () => ({ onDeepLink: async () => () => {} }))
 // Pin the store base + email decode so the relay URL and session are deterministic.
 mock.module('../../lib/neonAuth', () => ({
   getStoreBaseUrl: () => 'https://store.test',
+  getAuthScheme: () => 'agent-store',
   emailFromJwt: () => 'dev@example.com',
   AUTH_REDIRECT_URL: 'agent-store://auth-callback',
 }))
@@ -63,7 +64,7 @@ test('sign-in is always configured (auth goes through the web store relay)', asy
 test('signIn opens the store relay page for the provider in the browser', async () => {
   renderProbe()
   fireEvent.click(screen.getByText('signin'))
-  await waitFor(() => expect(openMock).toHaveBeenCalledWith('https://store.test/auth/desktop?provider=github'))
+  await waitFor(() => expect(openMock).toHaveBeenCalledWith('https://store.test/auth/desktop?provider=github&scheme=agent-store'))
 })
 
 test('completeSignIn stores the deep-linked token and syncs entitlements', async () => {
