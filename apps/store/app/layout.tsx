@@ -53,7 +53,7 @@ export default async function RootLayout({
   const user = await getCurrentUser()
 
   return (
-    <html lang={locale} className={`${inter.variable} ${jetbrainsMono.variable}`} data-theme="dark">
+    <html lang={locale} className={`${inter.variable} ${jetbrainsMono.variable}`} data-theme="dark" suppressHydrationWarning>
       <body className="min-h-screen bg-store-content text-store-text antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ClientStateProvider>
