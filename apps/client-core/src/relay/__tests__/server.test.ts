@@ -6,6 +6,7 @@ import { writeRegistry } from '../../registry/index'
 import { itemDir } from '../../paths'
 import { recordProviderHealthBatch } from '../../usage/provider-health'
 import { writeEntitlementCache } from '../../entitlement/index'
+import { getRecentRequests } from '../../usage/queries'
 import type { InstalledItem } from '@as/types'
 
 // Drive a provider into the cooling-down state (2 consecutive server failures).
@@ -134,6 +135,31 @@ test('returns 403 and does not forward when the requested model is not in the wh
 
   expect(res.status).toBe(403)
   expect(called).toBe(false)
+})
+
+test('does not record usage when every candidate is whitelist-rejected (403, no upstream dialed)', async () => {
+  await installProvider('test-provider', { codex: true }, {
+    apiKey: 'sk-test', baseUrl: 'https://upstream.example.com', whitelist: ['claude-*'],
+  })
+
+  let called = false
+  const fetchImpl = (async (_url: string) => {
+    called = true
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+  stop = server.stop
+
+  const res = await fetch(`http://127.0.0.1:${server.port}/responses`, {
+    method: 'POST',
+    body: JSON.stringify({ model: 'gpt-4o' }),
+  })
+
+  expect(res.status).toBe(403)
+  expect(called).toBe(false)
+  // No real upstream attempt happened, so nothing should be logged as usage.
+  expect(getRecentRequests(aasHome)).toEqual([])
 })
 
 test('forwards to the endpoint override path instead of the route default when connection.endpointPath is set', async () => {

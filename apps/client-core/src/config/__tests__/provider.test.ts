@@ -66,6 +66,19 @@ test('duplicateProviderConnection copies manifest with new slug/id and appends a
   expect(config).toEqual({ apiKey: '', baseUrl: 'https://x.com' })
 })
 
+test('duplicateProviderConnection falls back to the new slug for the copy name when the source manifest has no name', async () => {
+  const sourceDir = join(dir, 'source-no-name')
+  const targetDir = join(dir, 'target-no-name')
+  await mkdir(sourceDir, { recursive: true })
+  await writeFile(join(sourceDir, 'manifest.json'), JSON.stringify({ id: 'yls', slug: 'yls' }))
+
+  await duplicateProviderConnection(sourceDir, targetDir, 'yls-copy')
+
+  const manifest = JSON.parse(await readFile(join(targetDir, 'manifest.json'), 'utf-8'))
+  expect(manifest.name).toBe('yls-copy 副本')
+  expect(manifest.name).not.toContain('undefined')
+})
+
 test('duplicateProviderConnection strips every credential alias (apiKey, apiKeys, token)', async () => {
   const sourceDir = join(dir, 'source-secrets')
   const targetDir = join(dir, 'target-secrets')

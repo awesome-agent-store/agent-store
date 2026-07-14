@@ -105,7 +105,11 @@ export async function readProviderConnection(itemDir: string): Promise<ProviderC
       whitelist: readStringArray(raw['whitelist']),
       healthCheck: readBoolean(raw['healthCheck']),
     }
-  } catch {
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException)?.code
+    if (code !== 'ENOENT') {
+      console.warn(`[provider] failed to read config at ${itemDir}: ${String(err)}`)
+    }
     return {}
   }
 }
@@ -120,11 +124,12 @@ export async function duplicateProviderConnection(
   const manifestRaw = JSON.parse(
     await readFile(join(sourceDir, 'manifest.json'), 'utf-8')
   ) as Record<string, unknown>
+  const baseName = typeof manifestRaw['name'] === 'string' ? manifestRaw['name'] : newSlug
   const manifest = {
     ...manifestRaw,
     slug: newSlug,
     id: newSlug,
-    name: `${String(manifestRaw['name'])} 副本`,
+    name: `${baseName} 副本`,
   }
   await writeFile(join(targetDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
 

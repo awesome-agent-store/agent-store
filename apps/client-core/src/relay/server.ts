@@ -109,7 +109,10 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
       const contentType = upstreamResponse.headers.get('content-type') ?? ''
       const isStreaming = contentType.includes('text/event-stream')
 
-      if (upstreamResponse.body) {
+      // Only record usage when a real upstream was dialed. An empty attempts array
+      // means every candidate was whitelist-rejected before any request went out
+      // (the synthetic 403 below), so there is no upstream call to attribute usage to.
+      if (upstreamResponse.body && attempts.length > 0) {
         const [clientStream, usageStream] = upstreamResponse.body.tee()
         void recordUsageAsync({
           aasHome, providerSlug: usedSlug, target, model: requestedModel ?? 'unknown',
